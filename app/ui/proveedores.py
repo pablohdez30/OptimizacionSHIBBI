@@ -181,6 +181,14 @@ class ProveedoresView(ctk.CTkFrame):
             ctk.CTkLabel(self.list_scroll, text="No hay proveedores",
                          text_color=self.app.COLOR_TEXT_LIGHT).pack(pady=30)
             return
+
+        # Batch query: get material counts for all providers in one query
+        mat_counts = {}
+        rows = self.app.db.fetchall(
+            "SELECT proveedor_id, COUNT(DISTINCT descripcion_material) as c FROM historico_precios_proveedor GROUP BY proveedor_id")
+        for r in rows:
+            mat_counts[r["proveedor_id"]] = r["c"]
+
         for p in proveedores:
             row = ctk.CTkFrame(self.list_scroll, fg_color="transparent", height=36, cursor="hand2")
             row.pack(fill="x", pady=1)
@@ -189,12 +197,9 @@ class ProveedoresView(ctk.CTkFrame):
             lbl.pack(side="left", padx=10, fill="x", expand=True)
             lbl.bind("<Button-1>", lambda e, pid=p["id"]: self._seleccionar(pid))
             row.bind("<Button-1>", lambda e, pid=p["id"]: self._seleccionar(pid))
-            # Material count (quick query)
-            count = self.app.db.fetchone(
-                "SELECT COUNT(DISTINCT descripcion_material) as c FROM historico_precios_proveedor WHERE proveedor_id = ?",
-                (p["id"],))
-            if count and count["c"] > 0:
-                ctk.CTkLabel(row, text=f"{count['c']} mat.", font=ctk.CTkFont(size=11),
+            count = mat_counts.get(p["id"], 0)
+            if count > 0:
+                ctk.CTkLabel(row, text=f"{count} mat.", font=ctk.CTkFont(size=11),
                              text_color=self.app.COLOR_TEXT_LIGHT).pack(side="right", padx=8)
 
     def _seleccionar(self, proveedor_id):

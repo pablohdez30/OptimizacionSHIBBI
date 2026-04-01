@@ -13,6 +13,7 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         self.app = app
         self.presupuesto_id = presupuesto_id
         self.mueble_frames = []
+        self._cached_iva_pct = self.app.config_model.obtener_float("iva_porcentaje", 21)
         self._build_ui()
         if presupuesto_id:
             self._cargar_presupuesto()
@@ -163,7 +164,7 @@ class NuevoPresupuestoView(ctk.CTkFrame):
 
     def _update_summary(self):
         total_base = sum(mf.get_precio_cliente() * mf.get_cantidad() for mf in self.mueble_frames)
-        iva_pct = self.app.config_model.obtener_float("iva_porcentaje", 21)
+        iva_pct = self._cached_iva_pct
         self._lbl_base.configure(text=f"{total_base:,.2f}€")
         self._lbl_iva.configure(text=f"{total_base * iva_pct / 100:,.2f}€")
         self._lbl_total.configure(text=f"{total_base * (1 + iva_pct / 100):,.2f}€")

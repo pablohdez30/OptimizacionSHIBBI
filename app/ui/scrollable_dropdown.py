@@ -23,6 +23,7 @@ class ScrollableComboBox(ctk.CTkFrame):
         self._dropdown_win = None
         self._listbox = None
         self._selected_idx = -1
+        self._filter_after_id = None
 
         # Entry field
         self._entry = ctk.CTkEntry(self, width=width - 32, height=height,
@@ -61,8 +62,8 @@ class ScrollableComboBox(ctk.CTkFrame):
         self._entry.bind(event, handler, add)
 
     def _on_key(self, event=None):
-        """Filter list on every keystroke."""
-        # Handle navigation keys
+        """Filter list with debounce to avoid blocking UI on fast typing."""
+        # Handle navigation keys immediately (no debounce)
         if event and event.keysym == "Down":
             self._move_selection(1)
             return
@@ -72,7 +73,18 @@ class ScrollableComboBox(ctk.CTkFrame):
         if event and event.keysym == "Return":
             self._select_current()
             return
+        # Ignore modifier keys that don't change text
+        if event and event.keysym in ("Shift_L", "Shift_R", "Control_L", "Control_R",
+                                       "Alt_L", "Alt_R", "Caps_Lock", "Tab"):
+            return
 
+        # Debounce filtering
+        if self._filter_after_id:
+            self.after_cancel(self._filter_after_id)
+        self._filter_after_id = self.after(150, self._apply_filter)
+
+    def _apply_filter(self):
+        """Apply the filter after debounce delay."""
         typed = self._entry.get().strip().lower()
         if typed:
             self._filtered = [v for v in self._values if typed in v.lower()]

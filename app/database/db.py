@@ -121,6 +121,14 @@ class Database:
                 descripcion TEXT DEFAULT '',
                 fecha_modificacion TEXT NOT NULL
             );
+
+            -- Indexes for search performance
+            CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre);
+            CREATE INDEX IF NOT EXISTS idx_clientes_activo ON clientes(activo);
+            CREATE INDEX IF NOT EXISTS idx_proveedores_nombre ON proveedores(nombre);
+            CREATE INDEX IF NOT EXISTS idx_proveedores_activo ON proveedores(activo);
+            CREATE INDEX IF NOT EXISTS idx_historico_proveedor_id ON historico_precios_proveedor(proveedor_id);
+            CREATE INDEX IF NOT EXISTS idx_historico_descripcion ON historico_precios_proveedor(descripcion_material);
         """)
         self.conn.commit()
 
