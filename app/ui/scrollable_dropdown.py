@@ -142,7 +142,7 @@ class ScrollableComboBox(ctk.CTkFrame):
         inner.pack(fill="both", expand=True)
 
         # Count label
-        self._count_label = tk.Label(inner, text="", font=("Segoe UI", 9),
+        self._count_label = tk.Label(inner, text="", font=("Segoe UI", 10),
                                       fg="#888", bg="#f5f5f5", anchor="w")
         self._count_label.pack(fill="x", padx=0, pady=(0, 1))
 
@@ -152,7 +152,7 @@ class ScrollableComboBox(ctk.CTkFrame):
 
         self._listbox = tk.Listbox(
             list_frame,
-            font=("Segoe UI", 13),
+            font=("Segoe UI", 14),
             bg="#ffffff",
             fg="#1a1a2e",
             selectbackground="#e94560",
@@ -212,7 +212,7 @@ class ScrollableComboBox(ctk.CTkFrame):
         w = max(self._entry.winfo_width() + 34, 500)
 
         # Height: fill most of available screen space below the entry
-        item_h = 30
+        item_h = 34
         n_items = min(max(len(self._filtered), 1), 25)
         h = (n_items * item_h) + 28
 
