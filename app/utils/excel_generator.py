@@ -163,7 +163,7 @@ def generar_excel_presupuesto(app, presupuesto_id):
                         for c in pres["cliente_nombre"]).strip()
     output_dir = os.path.join(base_output, safe_name)
     os.makedirs(output_dir, exist_ok=True)
-    filename = f"Desglose_{pres['numero_presupuesto']}.xlsx"
+    filename = f"Desglose_{pres['numero_presupuesto']}_{safe_name}.xlsx"
     filepath = os.path.join(output_dir, filename)
     wb.save(filepath)
     return filepath
