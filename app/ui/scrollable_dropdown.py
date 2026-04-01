@@ -209,12 +209,12 @@ class ScrollableComboBox(ctk.CTkFrame):
         self.update_idletasks()
         x = self._entry.winfo_rootx()
         y = self._entry.winfo_rooty() + self._entry.winfo_height() + 2
-        w = max(self._entry.winfo_width() + 34, 400)
+        w = max(self._entry.winfo_width() + 34, 500)
 
-        # Height: each item ~32px, show max 18 items
-        n_items = min(max(len(self._filtered), 1), 18)
-        item_h = 32
-        h = (n_items * item_h) + 28  # +28 for count label
+        # Height: fill most of available screen space below the entry
+        item_h = 30
+        n_items = min(max(len(self._filtered), 1), 25)
+        h = (n_items * item_h) + 28
 
         # Don't go below screen
         screen_h = self.winfo_screenheight()
