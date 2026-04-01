@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.db
+.shibbishop/
+dist/
+build/
+*.spec
+*.egg-info/
+.env
