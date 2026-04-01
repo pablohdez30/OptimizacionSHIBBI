@@ -14,9 +14,27 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         self.presupuesto_id = presupuesto_id
         self.mueble_frames = []
         self._cached_iva_pct = self.app.config_model.obtener_float("iva_porcentaje", 21)
+        self._refresh_timer = None
         self._build_ui()
         if presupuesto_id:
             self._cargar_presupuesto()
+        # Periodic refresh: forces CTkEntry canvas widgets to repaint.
+        # Without this, text typed in CTkEntry inside CTkScrollableFrame
+        # doesn't appear until a window resize event on some Windows systems.
+        self._start_refresh()
+
+    def _start_refresh(self):
+        """Lightweight periodic refresh to keep CTkEntry canvases updating."""
+        try:
+            self.scroll.update_idletasks()
+        except Exception:
+            pass
+        self._refresh_timer = self.after(50, self._start_refresh)
+
+    def destroy(self):
+        if self._refresh_timer:
+            self.after_cancel(self._refresh_timer)
+        super().destroy()
 
     def _build_ui(self):
         self.grid_columnconfigure(0, weight=1)
