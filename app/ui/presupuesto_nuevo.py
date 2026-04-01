@@ -4,6 +4,19 @@ import tkinter as tk
 from datetime import datetime
 
 
+def make_entry(parent, width=20, **kw):
+    """Create a ttk.Entry (native = zero lag)."""
+    e = ttk.Entry(parent, width=width, font=("Segoe UI", 11), style="App.TEntry", **kw)
+    return e
+
+
+def make_combo(parent, values, width=20, **kw):
+    """Create a ttk.Combobox (native = zero lag, scrollable dropdown)."""
+    c = ttk.Combobox(parent, values=values, width=width, font=("Segoe UI", 11),
+                     style="App.TCombobox", **kw)
+    return c
+
+
 class NuevoPresupuestoView(ctk.CTkFrame):
     """Create/edit budget with cost breakdown per furniture item."""
 
@@ -13,7 +26,6 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         self.presupuesto_id = presupuesto_id
         self.mueble_frames = []
         self._build_ui()
-
         if presupuesto_id:
             self._cargar_presupuesto()
 
@@ -25,7 +37,6 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         header = ctk.CTkFrame(self, fg_color=self.app.COLOR_CARD, corner_radius=0, height=70)
         header.grid(row=0, column=0, sticky="ew")
         header.grid_propagate(False)
-
         self.title_label = ctk.CTkLabel(
             header, text="Nuevo Presupuesto" if not self.presupuesto_id else "Editar Presupuesto",
             font=ctk.CTkFont(size=24, weight="bold"), text_color=self.app.COLOR_TEXT)
@@ -33,7 +44,6 @@ class NuevoPresupuestoView(ctk.CTkFrame):
 
         btn_frame = ctk.CTkFrame(header, fg_color="transparent")
         btn_frame.pack(side="right", padx=20)
-
         ctk.CTkButton(btn_frame, text="+ Nuevo", width=90,
                       fg_color="#6c757d", hover_color="#495057",
                       command=self._nuevo_presupuesto).pack(side="left", padx=5)
@@ -59,71 +69,88 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         info_inner = ctk.CTkFrame(info_card, fg_color="transparent")
         info_inner.pack(fill="x", padx=20, pady=15)
 
+        # Row 1: Client (searchable combo) + Nº + Fecha
         row1 = ctk.CTkFrame(info_inner, fg_color="transparent")
         row1.pack(fill="x", pady=(0, 8))
         ctk.CTkLabel(row1, text="Cliente:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
+
         clientes = self.app.cliente_model.listar()
         self.cliente_names = {c["nombre"]: c["id"] for c in clientes}
-        client_values = list(self.cliente_names.keys()) if self.cliente_names else ["(sin clientes)"]
-        self.cliente_combo = ctk.CTkComboBox(row1, values=client_values, width=250)
-        self.cliente_combo.pack(side="left", padx=(10, 20))
-        if client_values:
-            self.cliente_combo.set(client_values[0])
+        self._all_client_values = sorted(self.cliente_names.keys())
+
+        # Searchable client combo
+        self.cliente_combo = make_combo(row1, values=self._all_client_values, width=30)
+        self.cliente_combo.pack(side="left", padx=(10, 5), pady=3)
+        if self._all_client_values:
+            self.cliente_combo.set(self._all_client_values[0])
+        self.cliente_combo.bind("<KeyRelease>", self._filter_clients)
+
         ctk.CTkButton(row1, text="+ Cliente", width=80, height=28,
                       fg_color="#6c757d", hover_color="#495057",
                       font=ctk.CTkFont(size=12),
-                      command=self._quick_new_client).pack(side="left", padx=(0, 30))
+                      command=self._quick_new_client).pack(side="left", padx=(0, 20))
+
         ctk.CTkLabel(row1, text="Nº:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.numero_label = ctk.CTkLabel(row1, text="(auto)",
-                                          font=ctk.CTkFont(size=13),
+        self.numero_label = ctk.CTkLabel(row1, text="(auto)", font=ctk.CTkFont(size=13),
                                           text_color=self.app.COLOR_TEXT_LIGHT)
         self.numero_label.pack(side="left", padx=10)
+
         ctk.CTkLabel(row1, text="Fecha:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left", padx=(20, 0))
-        self.fecha_entry = ctk.CTkEntry(row1, width=110, height=30)
-        self.fecha_entry.pack(side="left", padx=10)
+        self.fecha_entry = make_entry(row1, width=12)
+        self.fecha_entry.pack(side="left", padx=10, pady=3)
         self.fecha_entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
 
+        # Row 2: Proyecto + Instalación
         row2 = ctk.CTkFrame(info_inner, fg_color="transparent")
         row2.pack(fill="x", pady=(0, 5))
         ctk.CTkLabel(row2, text="Proyecto:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.proyecto_entry = ctk.CTkEntry(row2, width=300, height=30,
-                                            placeholder_text="Ej: Reforma cocina, Salón principal...")
-        self.proyecto_entry.pack(side="left", padx=(10, 20))
+        self.proyecto_entry = make_entry(row2, width=35)
+        self.proyecto_entry.pack(side="left", padx=(10, 20), pady=3)
         ctk.CTkLabel(row2, text="Instalación:", font=ctk.CTkFont(size=13),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
         self.instalacion_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(row2, text="Incluida", variable=self.instalacion_var,
                         font=ctk.CTkFont(size=12)).pack(side="left", padx=10)
 
+        # Row 3: Notas
         row3 = ctk.CTkFrame(info_inner, fg_color="transparent")
         row3.pack(fill="x")
         ctk.CTkLabel(row3, text="Notas internas:", font=ctk.CTkFont(size=13),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.notas_entry = ctk.CTkEntry(row3, width=500, height=30,
-                                         placeholder_text="Notas internas...")
-        self.notas_entry.pack(side="left", padx=10)
+        self.notas_entry = make_entry(row3, width=60)
+        self.notas_entry.pack(side="left", padx=10, pady=3)
 
-        # --- Furniture items section ---
+        # --- Furniture items ---
         self.muebles_container = ctk.CTkFrame(self.scroll, fg_color="transparent")
         self.muebles_container.pack(fill="x", pady=(0, 5))
-
-        ctk.CTkButton(self.scroll, text="+ Añadir Mueble/Producto",
-                      height=40, font=ctk.CTkFont(size=14),
-                      fg_color=self.app.COLOR_ACCENT,
+        ctk.CTkButton(self.scroll, text="+ Añadir Mueble/Producto", height=40,
+                      font=ctk.CTkFont(size=14), fg_color=self.app.COLOR_ACCENT,
                       hover_color=self.app.COLOR_ACCENT_HOVER,
                       command=self._add_mueble).pack(fill="x", pady=(0, 10))
 
-        # --- Summary (created ONCE, text updated only) ---
+        # --- Summary ---
         self.summary_card = ctk.CTkFrame(self.scroll, fg_color=self.app.COLOR_CARD, corner_radius=12)
         self.summary_card.pack(fill="x", pady=(0, 10))
         self._build_summary()
 
         if not self.presupuesto_id:
             self._add_mueble()
+
+    def _filter_clients(self, event=None):
+        """Filter client dropdown as user types."""
+        typed = self.cliente_combo.get().lower()
+        if typed:
+            filtered = [c for c in self._all_client_values if typed in c.lower()]
+        else:
+            filtered = self._all_client_values
+        self.cliente_combo.configure(values=filtered)
+        # Keep dropdown open
+        if filtered:
+            self.cliente_combo.event_generate("<Down>")
 
     def _build_summary(self):
         inner = ctk.CTkFrame(self.summary_card, fg_color="transparent")
@@ -141,12 +168,11 @@ class NuevoPresupuestoView(ctk.CTkFrame):
                                       width=120, text_color=self.app.COLOR_TEXT, anchor="e")
         self._lbl_total = ctk.CTkLabel(summary, text="0,00€", font=ctk.CTkFont(size=16, weight="bold"),
                                         width=120, text_color=self.app.COLOR_ACCENT, anchor="e")
-        for label_text, vlbl in [("Base imponible:", self._lbl_base),
-                                  (f"IVA {iva_pct:.0f}%:", self._lbl_iva),
-                                  ("TOTAL:", self._lbl_total)]:
+        for text, vlbl in [("Base imponible:", self._lbl_base),
+                           (f"IVA {iva_pct:.0f}%:", self._lbl_iva), ("TOTAL:", self._lbl_total)]:
             row = ctk.CTkFrame(summary, fg_color="transparent")
             row.pack(fill="x", pady=2)
-            ctk.CTkLabel(row, text=label_text, font=vlbl.cget("font"), width=150,
+            ctk.CTkLabel(row, text=text, font=vlbl.cget("font"), width=150,
                          text_color=self.app.COLOR_TEXT, anchor="e").pack(side="left")
             vlbl.pack(in_=row, side="left", padx=(10, 0))
 
@@ -165,14 +191,13 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         mueble.pack(fill="x", pady=(0, 8))
         self.mueble_frames.append(mueble)
 
-    def _remove_mueble(self, mueble_frame):
-        if mueble_frame in self.mueble_frames:
-            self.mueble_frames.remove(mueble_frame)
-            mueble_frame.destroy()
+    def _remove_mueble(self, mf):
+        if mf in self.mueble_frames:
+            self.mueble_frames.remove(mf)
+            mf.destroy()
             self._update_summary()
 
     def _nuevo_presupuesto(self):
-        """Reset form for a brand new budget."""
         self.presupuesto_id = None
         self.numero_label.configure(text="(auto)")
         self.title_label.configure(text="Nuevo Presupuesto")
@@ -194,7 +219,8 @@ class NuevoPresupuestoView(ctk.CTkFrame):
             self.app.cliente_model.crear(nombre.strip())
             clientes = self.app.cliente_model.listar()
             self.cliente_names = {c["nombre"]: c["id"] for c in clientes}
-            self.cliente_combo.configure(values=list(self.cliente_names.keys()))
+            self._all_client_values = sorted(self.cliente_names.keys())
+            self.cliente_combo.configure(values=self._all_client_values)
             self.cliente_combo.set(nombre.strip())
             DetailRow._cached_cat_names = None
 
@@ -207,38 +233,31 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         if not self.mueble_frames:
             messagebox.showwarning("Aviso", "Añade al menos un mueble/producto.")
             return None
-
         proyecto = self.proyecto_entry.get().strip()
         if self.presupuesto_id:
             self.app.presupuesto_model.actualizar(
                 self.presupuesto_id, cliente_id=cliente_id, proyecto=proyecto,
                 notas_internas=self.notas_entry.get().strip(),
                 incluye_instalacion=1 if self.instalacion_var.get() else 0)
-            old_lineas = self.app.presupuesto_model.obtener_lineas(self.presupuesto_id)
-            for ol in old_lineas:
+            for ol in self.app.presupuesto_model.obtener_lineas(self.presupuesto_id):
                 self.app.presupuesto_model.eliminar_linea(ol["id"])
             pres_id = self.presupuesto_id
         else:
             pres_id = self.app.presupuesto_model.crear(
-                cliente_id, proyecto=proyecto,
-                notas_internas=self.notas_entry.get().strip(),
+                cliente_id, proyecto=proyecto, notas_internas=self.notas_entry.get().strip(),
                 incluye_instalacion=self.instalacion_var.get())
             self.presupuesto_id = pres_id
-
         prov_map = {p["nombre"]: p["id"] for p in self.app.proveedor_model.listar()}
         for i, mf in enumerate(self.mueble_frames):
-            linea_id = self.app.presupuesto_model.agregar_linea(
+            lid = self.app.presupuesto_model.agregar_linea(
                 pres_id, nombre_producto=mf.nombre_entry.get().strip() or f"Producto {i+1}",
                 descripcion=mf.desc_entry.get().strip(), cantidad=mf.get_cantidad(),
-                precio_unitario_final=mf.get_precio_cliente(),
-                margen_porcentaje=mf.get_margen(), orden=i)
+                precio_unitario_final=mf.get_precio_cliente(), margen_porcentaje=mf.get_margen(), orden=i)
             for det in mf.get_detalles():
                 cat = self.app.categoria_model.obtener_por_nombre(det["categoria"])
                 self.app.presupuesto_model.agregar_detalle_coste(
-                    linea_id, prov_map.get(det["proveedor"]),
-                    cat["id"] if cat else None, det["descripcion"],
-                    det["cantidad"], det["precio_unitario"], det.get("notas", ""))
-
+                    lid, prov_map.get(det["proveedor"]), cat["id"] if cat else None,
+                    det["descripcion"], det["cantidad"], det["precio_unitario"], "")
         pres = self.app.presupuesto_model.obtener(pres_id)
         if pres:
             self.numero_label.configure(text=pres["numero_presupuesto"])
@@ -246,8 +265,7 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         return pres_id
 
     def _guardar_con_mensaje(self):
-        pres_id = self._guardar()
-        if pres_id:
+        if pid := self._guardar():
             messagebox.showinfo("Guardado", "Presupuesto guardado correctamente.")
 
     def _cargar_presupuesto(self):
@@ -275,27 +293,20 @@ class NuevoPresupuestoView(ctk.CTkFrame):
                 "cantidad": linea["cantidad"], "margen": linea["margen_porcentaje"],
                 "detalles": [{"categoria": d["categoria_nombre"] or "", "proveedor": d["proveedor_nombre"] or "",
                               "descripcion": d["descripcion"] or "", "cantidad": d["cantidad"],
-                              "precio_unitario": d["precio_unitario"]} for d in detalles]
-            })
+                              "precio_unitario": d["precio_unitario"]} for d in detalles]})
         self._update_summary()
 
     def _generar_excel(self):
-        pres_id = self._guardar()
-        if not pres_id:
-            return
-        from app.utils.excel_generator import generar_excel_presupuesto
-        path = generar_excel_presupuesto(self.app, pres_id)
-        if path:
-            messagebox.showinfo("Excel generado", f"Archivo guardado en:\n{path}")
+        if pid := self._guardar():
+            from app.utils.excel_generator import generar_excel_presupuesto
+            if path := generar_excel_presupuesto(self.app, pid):
+                messagebox.showinfo("Excel generado", f"Archivo guardado en:\n{path}")
 
     def _generar_pdf(self):
-        pres_id = self._guardar()
-        if not pres_id:
-            return
-        from app.utils.pdf_generator import generar_pdf_presupuesto
-        path = generar_pdf_presupuesto(self.app, pres_id)
-        if path:
-            messagebox.showinfo("PDF generado", f"Archivo guardado en:\n{path}")
+        if pid := self._guardar():
+            from app.utils.pdf_generator import generar_pdf_presupuesto
+            if path := generar_pdf_presupuesto(self.app, pid):
+                messagebox.showinfo("PDF generado", f"Archivo guardado en:\n{path}")
 
 
 class MuebleFrame(ctk.CTkFrame):
@@ -311,48 +322,46 @@ class MuebleFrame(ctk.CTkFrame):
         header.pack(fill="x", padx=15, pady=(12, 5))
         ctk.CTkLabel(header, text="Nombre:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.nombre_entry = ctk.CTkEntry(header, width=250, height=30,
-                                          placeholder_text="Ej: Mesa Piramidal Óxido")
-        self.nombre_entry.pack(side="left", padx=(8, 15))
+        self.nombre_entry = make_entry(header, width=30)
+        self.nombre_entry.pack(side="left", padx=(8, 15), pady=3)
         ctk.CTkLabel(header, text="Descripción:", font=ctk.CTkFont(size=13),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.desc_entry = ctk.CTkEntry(header, width=250, height=30,
-                                        placeholder_text="Ej: 140*140*45Hcm")
-        self.desc_entry.pack(side="left", padx=(8, 15))
+        self.desc_entry = make_entry(header, width=30)
+        self.desc_entry.pack(side="left", padx=(8, 15), pady=3)
         ctk.CTkLabel(header, text="Cant:", font=ctk.CTkFont(size=13),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.cant_entry = ctk.CTkEntry(header, width=50, height=30)
-        self.cant_entry.pack(side="left", padx=(5, 15))
+        self.cant_entry = make_entry(header, width=5)
+        self.cant_entry.pack(side="left", padx=(5, 15), pady=3)
         self.cant_entry.insert(0, "1")
         ctk.CTkLabel(header, text="Margen %:", font=ctk.CTkFont(size=13),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.margen_entry = ctk.CTkEntry(header, width=60, height=30)
-        self.margen_entry.pack(side="left", padx=(5, 10))
+        self.margen_entry = make_entry(header, width=6)
+        self.margen_entry.pack(side="left", padx=(5, 10), pady=3)
         self.margen_entry.insert(0, self.app.config_model.obtener("margen_default") or "100")
         ctk.CTkButton(header, text="X", width=30, height=30,
                       fg_color=self.app.COLOR_DANGER, hover_color="#c1121f",
                       command=lambda: self.view._remove_mueble(self)).pack(side="right")
 
-        table_frame = ctk.CTkFrame(self, fg_color="transparent")
-        table_frame.pack(fill="x", padx=15, pady=(5, 5))
-        th = ctk.CTkFrame(table_frame, fg_color="#f0f2f5", corner_radius=4)
+        table = ctk.CTkFrame(self, fg_color="transparent")
+        table.pack(fill="x", padx=15, pady=(5, 5))
+        th = ctk.CTkFrame(table, fg_color="#f0f2f5", corner_radius=4)
         th.pack(fill="x", pady=(0, 3))
         for text, w in [("Categoría", 130), ("Proveedor", 130), ("Material", 170),
                         ("Cant.", 70), ("Precio Ud.", 90), ("Total", 90)]:
             ctk.CTkLabel(th, text=text, width=w, font=ctk.CTkFont(size=11, weight="bold"),
                          text_color=self.app.COLOR_TEXT_LIGHT, anchor="w").pack(side="left", padx=3, pady=5)
-        self.rows_container = ctk.CTkFrame(table_frame, fg_color="transparent")
+        self.rows_container = ctk.CTkFrame(table, fg_color="transparent")
         self.rows_container.pack(fill="x")
-        ctk.CTkButton(table_frame, text="+ Añadir línea", width=120, height=28,
+        ctk.CTkButton(table, text="+ Añadir línea", width=120, height=28,
                       font=ctk.CTkFont(size=12), fg_color="#6c757d", hover_color="#495057",
                       command=self._add_detail_row).pack(anchor="w", pady=(5, 0))
 
-        self.totals_frame = ctk.CTkFrame(self, fg_color="#f8f9fa", corner_radius=0)
-        self.totals_frame.pack(fill="x", padx=15, pady=(5, 12))
-        self.coste_label = ctk.CTkLabel(self.totals_frame, text="Coste: 0,00€",
-                                         font=ctk.CTkFont(size=13), text_color=self.app.COLOR_TEXT)
+        tf = ctk.CTkFrame(self, fg_color="#f8f9fa", corner_radius=0)
+        tf.pack(fill="x", padx=15, pady=(5, 12))
+        self.coste_label = ctk.CTkLabel(tf, text="Coste: 0,00€", font=ctk.CTkFont(size=13),
+                                         text_color=self.app.COLOR_TEXT)
         self.coste_label.pack(side="left", padx=15, pady=8)
-        self.precio_label = ctk.CTkLabel(self.totals_frame, text="Precio cliente: 0,00€",
+        self.precio_label = ctk.CTkLabel(tf, text="Precio cliente: 0,00€",
                                           font=ctk.CTkFont(size=14, weight="bold"),
                                           text_color=self.app.COLOR_ACCENT)
         self.precio_label.pack(side="right", padx=15, pady=8)
@@ -383,32 +392,27 @@ class MuebleFrame(ctk.CTkFrame):
             self._recalculate()
 
     def _recalculate(self):
-        coste = self.get_coste_total()
-        self.coste_label.configure(text=f"Coste: {coste:,.2f}€")
+        self.coste_label.configure(text=f"Coste: {self.get_coste_total():,.2f}€")
         self.precio_label.configure(text=f"Precio cliente: {self.get_precio_cliente():,.2f}€")
         self.view._update_summary()
 
     def get_coste_total(self):
         return sum(r.get_total() for r in self.detail_rows)
-
     def get_margen(self):
         try: return float(self.margen_entry.get().replace(",", "."))
         except ValueError: return 100
-
     def get_cantidad(self):
         try: return int(self.cant_entry.get())
         except ValueError: return 1
-
     def get_precio_cliente(self):
         return self.get_coste_total() * (1 + self.get_margen() / 100)
-
     def get_detalles(self):
         return [d for r in self.detail_rows for d in [r.get_data()]
                 if d["precio_unitario"] > 0 or d["descripcion"]]
 
 
 class DetailRow(ctk.CTkFrame):
-    """Cost detail row. Uses CTkOptionMenu instead of CTkComboBox (much lighter)."""
+    """All ttk widgets for zero input lag. CTkOptionMenu for selectors."""
 
     _cached_cat_names = None
     _cached_prov_names = None
@@ -420,18 +424,16 @@ class DetailRow(ctk.CTkFrame):
         self.app = app
         self.mueble = mueble
         self._prov_materials = {}
-        self._recalc_after_id = None
+        self._recalc_id = None
 
-        # One-time cache
         if DetailRow._cached_cat_names is None:
-            cats = app.categoria_model.listar()
-            DetailRow._cached_cat_names = [c["nombre"] for c in cats]
+            DetailRow._cached_cat_names = [c["nombre"] for c in app.categoria_model.listar()]
             provs = app.proveedor_model.listar()
             DetailRow._cached_prov_names = ["(manual)"] + [p["nombre"] for p in provs]
             DetailRow._cached_prov_ids = {p["nombre"]: p["id"] for p in provs}
             DetailRow._cached_precio_hora = app.config_model.obtener_float("precio_hora_mano_obra", 25)
 
-        # Category - use CTkOptionMenu (faster than CTkComboBox, no text input lag)
+        # Category selector (CTkOptionMenu = no text input = fast)
         self.cat_var = ctk.StringVar(value=DetailRow._cached_cat_names[0] if DetailRow._cached_cat_names else "")
         self.cat_menu = ctk.CTkOptionMenu(self, values=DetailRow._cached_cat_names,
                                            variable=self.cat_var, width=130, height=28,
@@ -441,7 +443,7 @@ class DetailRow(ctk.CTkFrame):
                                            command=self._on_category_change)
         self.cat_menu.pack(side="left", padx=3)
 
-        # Provider - CTkOptionMenu
+        # Provider selector
         self.prov_var = ctk.StringVar(value="(manual)")
         self.prov_menu = ctk.CTkOptionMenu(self, values=DetailRow._cached_prov_names,
                                             variable=self.prov_var, width=130, height=28,
@@ -451,20 +453,18 @@ class DetailRow(ctk.CTkFrame):
                                             command=self._on_proveedor_change)
         self.prov_menu.pack(side="left", padx=3)
 
-        # Material - CTkComboBox (needs text input for free typing + dropdown)
-        self.desc_combo = ctk.CTkComboBox(self, values=[], width=170, height=28,
-                                           font=ctk.CTkFont(size=12),
-                                           command=self._on_material_select)
-        self.desc_combo.pack(side="left", padx=3)
-        self.desc_combo.set("")
+        # Material: ttk.Combobox (needs text input + dropdown)
+        self.desc_combo = make_combo(self, values=[], width=20)
+        self.desc_combo.pack(side="left", padx=3, pady=3)
+        self.desc_combo.bind("<<ComboboxSelected>>", lambda e: self._on_material_select(self.desc_combo.get()))
 
-        # Cantidad and Precio - CTkEntry
-        self.cant_entry = ctk.CTkEntry(self, width=70, height=28, font=ctk.CTkFont(size=12))
-        self.cant_entry.pack(side="left", padx=3)
+        # Cant + Precio: ttk.Entry (zero lag)
+        self.cant_entry = make_entry(self, width=6)
+        self.cant_entry.pack(side="left", padx=3, pady=3)
         self.cant_entry.insert(0, "1")
 
-        self.precio_entry = ctk.CTkEntry(self, width=90, height=28, font=ctk.CTkFont(size=12))
-        self.precio_entry.pack(side="left", padx=3)
+        self.precio_entry = make_entry(self, width=8)
+        self.precio_entry.pack(side="left", padx=3, pady=3)
         self.precio_entry.insert(0, "0")
 
         self.total_label = ctk.CTkLabel(self, text="0.00€", width=90,
@@ -473,100 +473,85 @@ class DetailRow(ctk.CTkFrame):
         self.total_label.pack(side="left", padx=3)
 
         ctk.CTkButton(self, text="x", width=26, height=26,
-                      fg_color="#dc3545", hover_color="#c1121f",
-                      font=ctk.CTkFont(size=11),
+                      fg_color="#dc3545", hover_color="#c1121f", font=ctk.CTkFont(size=11),
                       command=lambda: mueble._remove_detail_row(self)).pack(side="left", padx=3)
 
-        self.cant_entry.bind("<KeyRelease>", lambda e: self._debounce_recalc())
-        self.precio_entry.bind("<KeyRelease>", lambda e: self._debounce_recalc())
+        self.cant_entry.bind("<KeyRelease>", lambda e: self._debounce())
+        self.precio_entry.bind("<KeyRelease>", lambda e: self._debounce())
 
         if data:
-            if data.get("categoria"):
-                self.cat_var.set(data["categoria"])
+            if data.get("categoria"): self.cat_var.set(data["categoria"])
             if data.get("proveedor"):
                 self.prov_var.set(data["proveedor"])
                 self._load_proveedor_materials(data["proveedor"])
-            if data.get("descripcion"):
-                self.desc_combo.set(data["descripcion"])
+            if data.get("descripcion"): self.desc_combo.set(data["descripcion"])
             if data.get("cantidad"):
-                self.cant_entry.delete(0, "end")
-                self.cant_entry.insert(0, str(data["cantidad"]))
+                self.cant_entry.delete(0, "end"); self.cant_entry.insert(0, str(data["cantidad"]))
             if data.get("precio_unitario"):
-                self.precio_entry.delete(0, "end")
-                self.precio_entry.insert(0, str(data["precio_unitario"]))
+                self.precio_entry.delete(0, "end"); self.precio_entry.insert(0, str(data["precio_unitario"]))
         else:
-            # Auto-fill Mano de Obra price
-            cat = self.cat_var.get()
-            if cat == "Mano de Obra":
+            if self.cat_var.get() == "Mano de Obra":
                 self.precio_entry.delete(0, "end")
                 self.precio_entry.insert(0, str(DetailRow._cached_precio_hora))
+                self.desc_combo.set("Mano de obra")
+        self._update_total()
 
-        self._update_total_label()
-
-    def _on_category_change(self, cat_name):
-        """Auto-fill price for Mano de Obra."""
-        if cat_name == "Mano de Obra":
+    def _on_category_change(self, cat):
+        if cat == "Mano de Obra":
             self.precio_entry.delete(0, "end")
             self.precio_entry.insert(0, str(DetailRow._cached_precio_hora))
             self.desc_combo.set("Mano de obra")
-            self._debounce_recalc()
+            self._debounce()
 
-    def _on_proveedor_change(self, prov_name):
-        if prov_name == "(manual)" or not prov_name:
+    def _on_proveedor_change(self, prov):
+        if prov == "(manual)" or not prov:
             self.desc_combo.configure(values=[])
             self.desc_combo.set("")
             return
-        self._load_proveedor_materials(prov_name)
+        self._load_proveedor_materials(prov)
 
-    def _load_proveedor_materials(self, prov_name):
-        prov_id = DetailRow._cached_prov_ids.get(prov_name)
-        if not prov_id:
-            return
-        materiales = self.app.historico_model.materiales_actuales_proveedor(prov_id)
-        self._prov_materials[prov_name] = {m["descripcion_material"]: m for m in materiales}
-        mat_names = [m["descripcion_material"] for m in materiales]
-        self.desc_combo.configure(values=mat_names)
-        if mat_names:
-            self.desc_combo.set(mat_names[0])
-            self._on_material_select(mat_names[0])
+    def _load_proveedor_materials(self, prov):
+        pid = DetailRow._cached_prov_ids.get(prov)
+        if not pid: return
+        mats = self.app.historico_model.materiales_actuales_proveedor(pid)
+        self._prov_materials[prov] = {m["descripcion_material"]: m for m in mats}
+        names = [m["descripcion_material"] for m in mats]
+        self.desc_combo.configure(values=names)
+        if names:
+            self.desc_combo.set(names[0])
+            self._on_material_select(names[0])
 
-    def _on_material_select(self, material_name):
-        prov_name = self.prov_var.get()
-        if prov_name in self._prov_materials:
-            mat_data = self._prov_materials[prov_name].get(material_name)
-            if mat_data:
+    def _on_material_select(self, name):
+        prov = self.prov_var.get()
+        if prov in self._prov_materials:
+            md = self._prov_materials[prov].get(name)
+            if md:
                 self.precio_entry.delete(0, "end")
-                self.precio_entry.insert(0, str(mat_data["precio"]))
-                cat_name = mat_data["categoria_nombre"]
-                if cat_name:
-                    self.cat_var.set(cat_name)
-                self._debounce_recalc()
+                self.precio_entry.insert(0, str(md["precio"]))
+                cn = md["categoria_nombre"]
+                if cn: self.cat_var.set(cn)
+                self._debounce()
 
-    def _debounce_recalc(self):
-        if self._recalc_after_id:
-            self.after_cancel(self._recalc_after_id)
-        self._recalc_after_id = self.after(250, self._do_recalc)
+    def _debounce(self):
+        if self._recalc_id: self.after_cancel(self._recalc_id)
+        self._recalc_id = self.after(250, self._recalc)
 
-    def _do_recalc(self):
-        self._update_total_label()
+    def _recalc(self):
+        self._update_total()
         self.mueble._recalculate()
 
-    def _update_total_label(self):
+    def _update_total(self):
         self.total_label.configure(text=f"{self.get_total():,.2f}€")
 
     def get_total(self):
-        try:
-            return float(self.cant_entry.get().replace(",", ".")) * float(self.precio_entry.get().replace(",", "."))
-        except ValueError:
-            return 0
+        try: return float(self.cant_entry.get().replace(",",".")) * float(self.precio_entry.get().replace(",","."))
+        except ValueError: return 0
 
     def get_data(self):
-        try: cant = float(self.cant_entry.get().replace(",", "."))
-        except ValueError: cant = 0
-        try: precio = float(self.precio_entry.get().replace(",", "."))
-        except ValueError: precio = 0
-        prov = self.prov_var.get()
-        return {"categoria": self.cat_var.get(),
-                "proveedor": "" if prov == "(manual)" else prov,
-                "descripcion": self.desc_combo.get().strip(),
-                "cantidad": cant, "precio_unitario": precio}
+        try: c = float(self.cant_entry.get().replace(",","."))
+        except ValueError: c = 0
+        try: p = float(self.precio_entry.get().replace(",","."))
+        except ValueError: p = 0
+        pv = self.prov_var.get()
+        return {"categoria": self.cat_var.get(), "proveedor": "" if pv == "(manual)" else pv,
+                "descripcion": self.desc_combo.get().strip(), "cantidad": c, "precio_unitario": p}

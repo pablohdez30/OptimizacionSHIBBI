@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from tkinter import ttk
 from app.database import Database
 from app.database.models import (
     ClienteModel, ProveedorModel, PresupuestoModel,
@@ -31,6 +32,13 @@ class ShibbiShopApp(ctk.CTk):
 
         ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
+
+        # Configure ttk styles for native widgets (fast, no lag)
+        style = ttk.Style()
+        style.configure("App.TEntry", padding=5)
+        style.configure("App.TCombobox", padding=3)
+        # Make combobox dropdown taller for long lists
+        self.option_add("*TCombobox*Listbox.font", ("Segoe UI", 10))
 
         # Database
         self.db = Database()
