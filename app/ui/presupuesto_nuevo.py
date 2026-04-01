@@ -1,5 +1,6 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
+import tkinter as tk
 from datetime import datetime
 
 
@@ -202,6 +203,8 @@ class NuevoPresupuestoView(ctk.CTkFrame):
             self.cliente_names = {c["nombre"]: c["id"] for c in clientes}
             self.cliente_combo.configure(values=list(self.cliente_names.keys()))
             self.cliente_combo.set(nombre.strip())
+            # Invalidate DetailRow cache
+            DetailRow._cached_cat_names = None
 
     def _guardar(self):
         """Save the budget. Returns the presupuesto_id or None on failure."""
@@ -508,64 +511,65 @@ class MuebleFrame(ctk.CTkFrame):
         return detalles
 
 
-class DetailRow(ctk.CTkFrame):
-    """A single cost detail row with proveedor material dropdown + auto-fill price."""
+class DetailRow(tk.Frame):
+    """A single cost detail row using lightweight tk widgets for speed."""
+
+    # Class-level cache to avoid repeated DB queries
+    _cached_cat_names = None
+    _cached_prov_names = None
+    _cached_prov_ids = None
 
     def __init__(self, parent, app, mueble, data=None):
-        super().__init__(parent, fg_color="transparent", height=32)
+        super().__init__(parent, bg="#ffffff", height=30)
         self.app = app
         self.mueble = mueble
-        self._prov_materials = {}  # Cache: {prov_name: [{desc, precio, unidad}, ...]}
+        self._prov_materials = {}
+        self._recalc_after_id = None
 
-        categorias = app.categoria_model.listar()
-        cat_names = [c["nombre"] for c in categorias]
+        # Cache categories and providers at class level
+        if DetailRow._cached_cat_names is None:
+            categorias = app.categoria_model.listar()
+            DetailRow._cached_cat_names = [c["nombre"] for c in categorias]
+            proveedores = app.proveedor_model.listar()
+            DetailRow._cached_prov_names = ["(manual)"] + [p["nombre"] for p in proveedores]
+            DetailRow._cached_prov_ids = {p["nombre"]: p["id"] for p in proveedores}
 
-        proveedores = app.proveedor_model.listar()
-        prov_names = ["(manual)"] + [p["nombre"] for p in proveedores]
-        self._prov_ids = {p["nombre"]: p["id"] for p in proveedores}
+        font = ("Segoe UI", 10)
 
-        self.cat_combo = ctk.CTkComboBox(self, values=cat_names, width=140, height=28,
-                                          font=ctk.CTkFont(size=12))
-        self.cat_combo.pack(side="left", padx=4)
+        self.cat_combo = ttk.Combobox(self, values=DetailRow._cached_cat_names,
+                                       width=16, font=font)
+        self.cat_combo.pack(side="left", padx=2)
 
-        self.prov_combo = ctk.CTkComboBox(self, values=prov_names, width=140, height=28,
-                                           font=ctk.CTkFont(size=12),
-                                           command=self._on_proveedor_change)
-        self.prov_combo.pack(side="left", padx=4)
+        self.prov_combo = ttk.Combobox(self, values=DetailRow._cached_prov_names,
+                                        width=16, font=font)
+        self.prov_combo.pack(side="left", padx=2)
         self.prov_combo.set("(manual)")
+        self.prov_combo.bind("<<ComboboxSelected>>", self._on_proveedor_change_event)
 
-        # Material: either free text or dropdown depending on proveedor
-        self.desc_combo = ctk.CTkComboBox(self, values=[], width=160, height=28,
-                                           font=ctk.CTkFont(size=12),
-                                           command=self._on_material_select)
-        self.desc_combo.pack(side="left", padx=4)
-        self.desc_combo.set("")
+        self.desc_combo = ttk.Combobox(self, values=[], width=20, font=font)
+        self.desc_combo.pack(side="left", padx=2)
+        self.desc_combo.bind("<<ComboboxSelected>>", self._on_material_select_event)
 
-        self.cant_entry = ctk.CTkEntry(self, width=60, height=28,
-                                        font=ctk.CTkFont(size=12))
-        self.cant_entry.pack(side="left", padx=4)
+        self.cant_entry = tk.Entry(self, width=6, font=font)
+        self.cant_entry.pack(side="left", padx=2)
         self.cant_entry.insert(0, "1")
 
-        self.precio_entry = ctk.CTkEntry(self, width=80, height=28,
-                                          font=ctk.CTkFont(size=12))
-        self.precio_entry.pack(side="left", padx=4)
+        self.precio_entry = tk.Entry(self, width=8, font=font)
+        self.precio_entry.pack(side="left", padx=2)
         self.precio_entry.insert(0, "0")
 
-        self.total_label = ctk.CTkLabel(self, text="0,00€", width=80,
-                                         font=ctk.CTkFont(size=12),
-                                         text_color=self.app.COLOR_TEXT, anchor="e")
-        self.total_label.pack(side="left", padx=4)
+        self.total_label = tk.Label(self, text="0,00€", width=10, font=font,
+                                     anchor="e", bg="#ffffff")
+        self.total_label.pack(side="left", padx=2)
 
-        # Delete row button
-        ctk.CTkButton(self, text="x", width=24, height=24,
-                      fg_color="#dc3545", hover_color="#c1121f",
-                      font=ctk.CTkFont(size=11),
-                      command=lambda: mueble._remove_detail_row(self)
-                      ).pack(side="left", padx=4)
+        del_btn = tk.Button(self, text="x", width=2, font=("Segoe UI", 8),
+                            fg="white", bg="#dc3545", relief="flat",
+                            command=lambda: mueble._remove_detail_row(self))
+        del_btn.pack(side="left", padx=2)
 
-        # Bind recalculation
-        self.cant_entry.bind("<KeyRelease>", lambda e: self._on_change())
-        self.precio_entry.bind("<KeyRelease>", lambda e: self._on_change())
+        # Debounced recalculation on keypress
+        self.cant_entry.bind("<KeyRelease>", lambda e: self._debounce_recalc())
+        self.precio_entry.bind("<KeyRelease>", lambda e: self._debounce_recalc())
 
         # Load data
         if data:
@@ -583,10 +587,10 @@ class DetailRow(ctk.CTkFrame):
                 self.precio_entry.delete(0, "end")
                 self.precio_entry.insert(0, str(data["precio_unitario"]))
 
-        self._on_change()
+        self._update_total_label()
 
-    def _on_proveedor_change(self, prov_name):
-        """When proveedor changes, load their materials into the dropdown."""
+    def _on_proveedor_change_event(self, event=None):
+        prov_name = self.prov_combo.get()
         if prov_name == "(manual)" or not prov_name:
             self.desc_combo.configure(values=[])
             self.desc_combo.set("")
@@ -595,7 +599,7 @@ class DetailRow(ctk.CTkFrame):
 
     def _load_proveedor_materials(self, prov_name):
         """Load materials from a proveedor into the description dropdown."""
-        prov_id = self._prov_ids.get(prov_name)
+        prov_id = DetailRow._cached_prov_ids.get(prov_name)
         if not prov_id:
             return
 
@@ -610,6 +614,9 @@ class DetailRow(ctk.CTkFrame):
             self.desc_combo.set(mat_names[0])
             self._on_material_select(mat_names[0])
 
+    def _on_material_select_event(self, event=None):
+        self._on_material_select(self.desc_combo.get())
+
     def _on_material_select(self, material_name):
         """When a material is selected from dropdown, auto-fill the price."""
         prov_name = self.prov_combo.get()
@@ -621,12 +628,20 @@ class DetailRow(ctk.CTkFrame):
                 # Also set the category
                 if mat_data.get("categoria_nombre"):
                     self.cat_combo.set(mat_data["categoria_nombre"])
-                self._on_change()
+                self._debounce_recalc()
 
-    def _on_change(self):
+    def _debounce_recalc(self):
+        if self._recalc_after_id:
+            self.after_cancel(self._recalc_after_id)
+        self._recalc_after_id = self.after(150, self._do_recalc)
+
+    def _do_recalc(self):
+        self._update_total_label()
+        self.mueble._recalculate()
+
+    def _update_total_label(self):
         total = self.get_total()
         self.total_label.configure(text=f"{total:,.2f}€")
-        self.mueble._recalculate()
 
     def get_total(self):
         try:
