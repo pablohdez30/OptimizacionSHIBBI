@@ -83,7 +83,8 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         self.cliente_names = {c["nombre"]: c["id"] for c in clientes}
         self._all_client_values = sorted(self.cliente_names.keys())
 
-        self.cliente_combo = ScrollableComboBox(row1, values=self._all_client_values, width=280,
+        self.cliente_combo = ScrollableComboBox(row1, values=self._all_client_values, width=350,
+                                                     height=34,
                                                      placeholder_text="Escribe para buscar...")
         self.cliente_combo.pack(side="left", padx=(10, 5))
         if self._all_client_values:

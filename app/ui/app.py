@@ -26,11 +26,16 @@ class ShibbiShopApp(ctk.CTk):
         super().__init__()
 
         self.title("ShibbiShop Manager")
-        self.geometry("1280x780")
+        self.geometry("1400x850")
         self.minsize(1024, 600)
 
         ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
+
+        # Ensure minimum widget scaling on high-DPI screens
+        current_scaling = ctk.ScalingTracker.get_widget_scaling(self)
+        if current_scaling < 1.0:
+            ctk.set_widget_scaling(1.0)
 
         # Database
         self.db = Database()
