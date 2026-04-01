@@ -511,8 +511,8 @@ class MuebleFrame(ctk.CTkFrame):
         return detalles
 
 
-class DetailRow(tk.Frame):
-    """A single cost detail row using lightweight tk widgets for speed."""
+class DetailRow(ctk.CTkFrame):
+    """A single cost detail row using lightweight ttk widgets inside CTk container."""
 
     # Class-level cache to avoid repeated DB queries
     _cached_cat_names = None
@@ -520,7 +520,7 @@ class DetailRow(tk.Frame):
     _cached_prov_ids = None
 
     def __init__(self, parent, app, mueble, data=None):
-        super().__init__(parent, bg="#ffffff", height=30)
+        super().__init__(parent, fg_color="transparent", height=36)
         self.app = app
         self.mueble = mueble
         self._prov_materials = {}
@@ -538,34 +538,36 @@ class DetailRow(tk.Frame):
 
         self.cat_combo = ttk.Combobox(self, values=DetailRow._cached_cat_names,
                                        width=16, font=font)
-        self.cat_combo.pack(side="left", padx=2)
+        self.cat_combo.pack(side="left", padx=3, pady=4)
 
         self.prov_combo = ttk.Combobox(self, values=DetailRow._cached_prov_names,
                                         width=16, font=font)
-        self.prov_combo.pack(side="left", padx=2)
+        self.prov_combo.pack(side="left", padx=3, pady=4)
         self.prov_combo.set("(manual)")
         self.prov_combo.bind("<<ComboboxSelected>>", self._on_proveedor_change_event)
 
-        self.desc_combo = ttk.Combobox(self, values=[], width=20, font=font)
-        self.desc_combo.pack(side="left", padx=2)
+        self.desc_combo = ttk.Combobox(self, values=[], width=22, font=font)
+        self.desc_combo.pack(side="left", padx=3, pady=4)
         self.desc_combo.bind("<<ComboboxSelected>>", self._on_material_select_event)
 
-        self.cant_entry = tk.Entry(self, width=6, font=font)
-        self.cant_entry.pack(side="left", padx=2)
+        self.cant_entry = tk.Entry(self, width=6, font=font, relief="solid", bd=1)
+        self.cant_entry.pack(side="left", padx=3, pady=4)
         self.cant_entry.insert(0, "1")
 
-        self.precio_entry = tk.Entry(self, width=8, font=font)
-        self.precio_entry.pack(side="left", padx=2)
+        self.precio_entry = tk.Entry(self, width=9, font=font, relief="solid", bd=1)
+        self.precio_entry.pack(side="left", padx=3, pady=4)
         self.precio_entry.insert(0, "0")
 
-        self.total_label = tk.Label(self, text="0,00€", width=10, font=font,
-                                     anchor="e", bg="#ffffff")
-        self.total_label.pack(side="left", padx=2)
+        self.total_label = ctk.CTkLabel(self, text="0,00€", width=80,
+                                         font=ctk.CTkFont(size=12),
+                                         text_color=app.COLOR_TEXT, anchor="e")
+        self.total_label.pack(side="left", padx=3)
 
-        del_btn = tk.Button(self, text="x", width=2, font=("Segoe UI", 8),
-                            fg="white", bg="#dc3545", relief="flat",
-                            command=lambda: mueble._remove_detail_row(self))
-        del_btn.pack(side="left", padx=2)
+        ctk.CTkButton(self, text="x", width=26, height=26,
+                      fg_color="#dc3545", hover_color="#c1121f",
+                      font=ctk.CTkFont(size=11),
+                      command=lambda: mueble._remove_detail_row(self)
+                      ).pack(side="left", padx=3)
 
         # Debounced recalculation on keypress
         self.cant_entry.bind("<KeyRelease>", lambda e: self._debounce_recalc())
@@ -625,9 +627,10 @@ class DetailRow(tk.Frame):
             if mat_data:
                 self.precio_entry.delete(0, "end")
                 self.precio_entry.insert(0, str(mat_data["precio"]))
-                # Also set the category
-                if mat_data.get("categoria_nombre"):
-                    self.cat_combo.set(mat_data["categoria_nombre"])
+                # Also set the category (sqlite3.Row uses [] not .get())
+                cat_name = mat_data["categoria_nombre"]
+                if cat_name:
+                    self.cat_combo.set(cat_name)
                 self._debounce_recalc()
 
     def _debounce_recalc(self):

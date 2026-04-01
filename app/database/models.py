@@ -271,6 +271,13 @@ class PresupuestoModel:
         return nuevo_id
 
     def eliminar(self, presupuesto_id):
+        # Delete child records first to avoid FK constraint errors
+        lineas = self.obtener_lineas(presupuesto_id)
+        for linea in lineas:
+            self.db.execute("DELETE FROM detalles_coste WHERE linea_presupuesto_id = ?", (linea["id"],))
+        self.db.execute("DELETE FROM lineas_presupuesto WHERE presupuesto_id = ?", (presupuesto_id,))
+        # Clear parent references from other presupuestos
+        self.db.execute("UPDATE presupuestos SET presupuesto_padre_id = NULL WHERE presupuesto_padre_id = ?", (presupuesto_id,))
         self.db.execute("DELETE FROM presupuestos WHERE id = ?", (presupuesto_id,))
 
     # --- Líneas de presupuesto ---
