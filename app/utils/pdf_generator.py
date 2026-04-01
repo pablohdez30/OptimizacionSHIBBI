@@ -1,16 +1,15 @@
 import os
 from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm, cm
-from reportlab.lib.colors import HexColor, Color
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
-from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+from reportlab.lib.colors import HexColor
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph, Image
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_RIGHT
 
 
 def generar_pdf_presupuesto(app, presupuesto_id):
-    """Generate PDF matching the original company template (PresupuestoPlantilla.xlsx)."""
+    """Generate PDF matching the original company template exactly."""
     pres = app.presupuesto_model.obtener(presupuesto_id)
     if not pres:
         return None
@@ -31,184 +30,170 @@ def generar_pdf_presupuesto(app, presupuesto_id):
     filename = f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}.pdf"
     filepath = os.path.join(output_dir, filename)
 
-    # Colors matching original template
-    logo_color = HexColor("#7FAEAB")  # Teal/sage color from SHIBBI logo
-    text_dark = HexColor("#333333")
-    text_gray = HexColor("#666666")
-    line_color = HexColor("#CCCCCC")
+    # Colors
+    black = HexColor("#000000")
+    border_color = HexColor("#000000")
+
+    # Styles
+    s_normal = ParagraphStyle("N", fontSize=11, fontName="Helvetica", textColor=black, leading=14)
+    s_bold = ParagraphStyle("B", fontSize=11, fontName="Helvetica-Bold", textColor=black, leading=14)
+    s_bold12 = ParagraphStyle("B12", fontSize=12, fontName="Helvetica-Bold", textColor=black, leading=15)
+    s_right = ParagraphStyle("R", fontSize=11, fontName="Helvetica", textColor=black, alignment=TA_RIGHT, leading=14)
+    s_right_bold = ParagraphStyle("RB", fontSize=11, fontName="Helvetica-Bold", textColor=black, alignment=TA_RIGHT, leading=14)
+    s_company = ParagraphStyle("C", fontSize=11, fontName="Helvetica-Bold", textColor=black, alignment=TA_RIGHT, leading=15)
 
     doc = SimpleDocTemplate(filepath, pagesize=A4,
-                            leftMargin=15 * mm, rightMargin=15 * mm,
-                            topMargin=10 * mm, bottomMargin=15 * mm)
-
-    styles = getSampleStyleSheet()
+                            leftMargin=20 * mm, rightMargin=20 * mm,
+                            topMargin=15 * mm, bottomMargin=15 * mm)
     elements = []
 
-    # --- LOGO: "SHIBBI" text in the teal/sage color ---
-    logo_style = ParagraphStyle("Logo", parent=styles["Normal"],
-                                 fontSize=36, fontName="Helvetica-Bold",
-                                 textColor=logo_color, leading=40, spaceAfter=2 * mm)
-    elements.append(Paragraph("SHIBBI", logo_style))
-    elements.append(Spacer(1, 3 * mm))
+    # --- LOGO IMAGE ---
+    logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              "assets", "logo_shibbi.jpg")
+    if os.path.exists(logo_path):
+        logo = Image(logo_path, width=50 * mm, height=14 * mm)
+        # Logo left + Company info right
+        header_data = [[logo, Paragraph(
+            f"{empresa_nombre}<br/>{empresa_dir}<br/>{empresa_ciudad}<br/>{empresa_cif}",
+            s_company)]]
+    else:
+        # Fallback text logo
+        s_logo = ParagraphStyle("Logo", fontSize=32, fontName="Helvetica-Bold",
+                                 textColor=HexColor("#7FAEAB"), leading=36)
+        header_data = [[Paragraph("SHIBBI", s_logo), Paragraph(
+            f"{empresa_nombre}<br/>{empresa_dir}<br/>{empresa_ciudad}<br/>{empresa_cif}",
+            s_company)]]
 
-    # --- Company info (right side) + Budget info (left side) ---
-    info_label = ParagraphStyle("InfoLabel", parent=styles["Normal"],
-                                 fontSize=10, fontName="Helvetica", textColor=text_dark)
-    info_bold = ParagraphStyle("InfoBold", parent=styles["Normal"],
-                                fontSize=10, fontName="Helvetica-Bold", textColor=text_dark)
-    info_company = ParagraphStyle("InfoCompany", parent=styles["Normal"],
-                                   fontSize=10, fontName="Helvetica-Bold", textColor=text_dark,
-                                   alignment=TA_RIGHT, leading=14)
+    ht = Table(header_data, colWidths=[90 * mm, 80 * mm])
+    ht.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+    ]))
+    elements.append(ht)
 
+    # --- Budget info + Client info ---
     try:
         fecha_str = datetime.strptime(pres["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y")
     except (ValueError, TypeError):
         fecha_str = pres["fecha"] or ""
 
-    header_data = [
-        [Paragraph(f"<b>PRESUPUESTO  Nº:</b>  {pres['numero_presupuesto']}", info_bold),
-         Paragraph(f"{empresa_nombre}<br/>{empresa_dir}<br/>{empresa_ciudad}<br/>{empresa_cif}", info_company)],
+    info_data = [
+        [Paragraph("<b>PRESUPUESTO  Nº:</b>", s_bold), Paragraph(pres["numero_presupuesto"], s_bold), "", ""],
+        [Paragraph("FECHA:", s_normal), Paragraph(fecha_str, s_normal), "", ""],
+        [Paragraph("CLIENTE:", s_normal), Paragraph(f"<b>{pres['cliente_nombre']}</b>", s_bold12), "", ""],
+        [Paragraph("DIRECCIÓN:", s_normal), Paragraph(pres["cliente_direccion"] or "", s_normal), "", ""],
+        [Paragraph("C.I.F./N.I.F:", s_normal), "", "", ""],
+        ["", Paragraph(pres["cliente_nif"] or "", s_normal), "", ""],
     ]
-    ht = Table(header_data, colWidths=[95 * mm, 85 * mm])
-    ht.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
-    elements.append(ht)
-    elements.append(Spacer(1, 3 * mm))
 
-    # Client details
-    client_data = [
-        [Paragraph("FECHA:", info_label), Paragraph(fecha_str, info_label),
-         "", ""],
-        [Paragraph("CLIENTE:", info_label), Paragraph(f"<b>{pres['cliente_nombre']}</b>", info_bold),
-         "", ""],
-        [Paragraph("DIRECCIÓN:", info_label), Paragraph(pres["cliente_direccion"] or "", info_label),
-         "", ""],
-        [Paragraph("C.I.F./N.I.F:", info_label), Paragraph(pres["cliente_nif"] or "", info_label),
-         "", ""],
-    ]
-    ct = Table(client_data, colWidths=[25 * mm, 70 * mm, 40 * mm, 45 * mm])
-    ct.setStyle(TableStyle([
+    it = Table(info_data, colWidths=[35 * mm, 55 * mm, 40 * mm, 40 * mm])
+    it.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING", (0, 0), (-1, -1), 1),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ("LINEBELOW", (0, 0), (1, 0), 1, border_color),
     ]))
-    elements.append(ct)
+    elements.append(it)
     elements.append(Spacer(1, 8 * mm))
 
-    # --- Products table ---
+    # --- Black bar + "Base" header ---
+    bar_data = [["", Paragraph("<b>Base</b>", s_right_bold)]]
+    bt = Table(bar_data, colWidths=[135 * mm, 35 * mm])
+    bt.setStyle(TableStyle([
+        ("LINEABOVE", (0, 0), (-1, 0), 2, border_color),
+        ("TOPPADDING", (0, 0), (-1, 0), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+    ]))
+    elements.append(bt)
+
+    # --- Products ---
     lineas = app.presupuesto_model.obtener_lineas(presupuesto_id)
-
-    # Header row
-    col_header_style = ParagraphStyle("ColH", parent=styles["Normal"],
-                                       fontSize=10, fontName="Helvetica-Bold",
-                                       textColor=text_dark, alignment=TA_RIGHT)
-    product_data = [["", Paragraph("<b>Base</b>", col_header_style)]]
-
     total_base = 0
-    product_style = ParagraphStyle("Prod", parent=styles["Normal"],
-                                    fontSize=10, fontName="Helvetica-Bold", textColor=text_dark)
-    desc_style = ParagraphStyle("Desc", parent=styles["Normal"],
-                                 fontSize=10, fontName="Helvetica", textColor=text_dark)
-    price_style = ParagraphStyle("Price", parent=styles["Normal"],
-                                  fontSize=10, fontName="Helvetica", textColor=text_dark,
-                                  alignment=TA_RIGHT)
 
     for linea in lineas:
         precio_total = linea["precio_unitario_final"] * linea["cantidad"]
         total_base += precio_total
 
-        # Product name row
-        product_data.append([
-            Paragraph(linea["nombre_producto"], product_style),
-            Paragraph(f"{precio_total:,.2f} €", price_style)
-        ])
+        # Product name + price
+        prod_row = [[Paragraph(f"<b>{linea['nombre_producto']}</b>", s_bold),
+                     Paragraph(f"€ {precio_total:,.2f}", s_right)]]
+        pt = Table(prod_row, colWidths=[135 * mm, 35 * mm])
+        pt.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, 0), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 1),
+        ]))
+        elements.append(pt)
 
-        # Description lines below product name
+        # Description lines
         if linea["descripcion"]:
             for desc_line in linea["descripcion"].split("\n"):
                 if desc_line.strip():
-                    product_data.append([Paragraph(desc_line.strip(), desc_style), ""])
+                    elements.append(Paragraph(desc_line.strip(), s_normal))
 
-        # Quantity if > 1
         if linea["cantidad"] > 1:
-            product_data.append([Paragraph(f"({linea['cantidad']} unidades)", desc_style), ""])
+            elements.append(Paragraph(f"({linea['cantidad']} unidades)", s_normal))
 
-    # Empty rows for spacing (like original template)
-    for _ in range(max(0, 6 - len(lineas))):
-        product_data.append(["", ""])
+        elements.append(Spacer(1, 2 * mm))
+
+    # Spacing to push porte note down
+    elements.append(Spacer(1, 10 * mm))
 
     # Porte note
-    porte_style = ParagraphStyle("Porte", parent=styles["Normal"],
-                                  fontSize=10, fontName="Helvetica-Bold", textColor=text_dark)
     if not pres["incluye_instalacion"]:
-        product_data.append([Paragraph("Porte No incluido", porte_style), ""])
+        elements.append(Paragraph("<b>Porte No incluido</b>", s_bold))
     else:
-        product_data.append([Paragraph("Porte e instalación incluidos", porte_style), ""])
+        elements.append(Paragraph("<b>Porte e instalación incluidos</b>", s_bold))
 
-    pt = Table(product_data, colWidths=[140 * mm, 40 * mm])
-    pt.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LINEBELOW", (0, 0), (-1, 0), 0.5, line_color),
-    ]))
-    elements.append(pt)
-    elements.append(Spacer(1, 8 * mm))
+    elements.append(Spacer(1, 10 * mm))
 
-    # --- Totals ---
+    # --- Totals box (with border like original) ---
     iva = total_base * (iva_pct / 100)
     total_final = total_base + iva
 
-    total_label = ParagraphStyle("TL", parent=styles["Normal"],
-                                  fontSize=11, fontName="Helvetica", textColor=text_dark,
-                                  alignment=TA_RIGHT)
-    total_value = ParagraphStyle("TV", parent=styles["Normal"],
-                                  fontSize=11, fontName="Helvetica", textColor=text_dark,
-                                  alignment=TA_RIGHT)
-    total_bold_label = ParagraphStyle("TBL", parent=styles["Normal"],
-                                       fontSize=12, fontName="Helvetica-Bold", textColor=text_dark,
-                                       alignment=TA_RIGHT)
-    total_bold_value = ParagraphStyle("TBV", parent=styles["Normal"],
-                                       fontSize=12, fontName="Helvetica-Bold", textColor=text_dark,
-                                       alignment=TA_RIGHT)
-
     totals_data = [
-        [Paragraph("Total Base", total_label), Paragraph(f"{total_base:,.2f} €", total_value)],
-        [Paragraph(f"I.V.A {iva_pct:.0f}%", total_label), Paragraph(f"{iva:,.2f} €", total_value)],
-        [Paragraph("TOTAL", total_bold_label), Paragraph(f"{total_final:,.2f} €", total_bold_value)],
+        [Paragraph("Total Base", s_normal), Paragraph(f"{total_base:,.2f} €", s_right)],
+        [Paragraph(f"I.V.A {iva_pct:.0f}%", s_normal), Paragraph(f"{iva:,.2f} €", s_right)],
+        [Paragraph("<b>TOTAL</b>", s_bold), Paragraph(f"<b>{total_final:,.2f} €</b>", s_right_bold)],
     ]
-    tt = Table(totals_data, colWidths=[35 * mm, 40 * mm])
+    tt = Table(totals_data, colWidths=[40 * mm, 40 * mm])
     tt.setStyle(TableStyle([
-        ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
+        ("BOX", (0, 0), (-1, -1), 1, border_color),
+        ("LINEABOVE", (0, 2), (-1, 2), 0.5, border_color),
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
         ("TOPPADDING", (0, 0), (-1, -1), 3),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LINEABOVE", (0, 2), (-1, 2), 1, text_dark),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
     ]))
 
     # Align totals to the right
-    tw = Table([[None, tt]], colWidths=[105 * mm, 75 * mm])
+    tw = Table([[None, tt]], colWidths=[90 * mm, 80 * mm])
     tw.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
     elements.append(tw)
-    elements.append(Spacer(1, 12 * mm))
+    elements.append(Spacer(1, 5 * mm))
 
-    # --- Payment conditions ---
-    cond_bold = ParagraphStyle("CB", parent=styles["Normal"],
-                                fontSize=11, fontName="Helvetica-Bold", textColor=text_dark, leading=16)
-    cond_normal = ParagraphStyle("CN", parent=styles["Normal"],
-                                  fontSize=11, fontName="Helvetica", textColor=text_dark, leading=16)
+    # --- Payment conditions (with border box like original) ---
+    cond_text = pres["condiciones_pago"] or "50% adelanto-50% antes de la entrega del trabajo."
+    dias = pres["dias_validez"] or 15
 
-    elements.append(Paragraph("CONDICIONES DE PAGO:", cond_bold))
+    cond_data = [
+        [Paragraph("<b>CONDICIONES DE PAGO:</b>", s_bold)],
+        [Paragraph(cond_text, s_normal)],
+        [Paragraph(f"Los presupuestos caducan a los {dias} días", s_normal)],
+    ]
+    ct = Table(cond_data, colWidths=[170 * mm])
+    ct.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 1, border_color),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(ct)
+
+    # Bank transfer line (bold, outside box like original)
     elements.append(Paragraph(
-        pres["condiciones_pago"] or "50% adelanto-50% antes de la entrega del trabajo.", cond_normal))
-
-    try:
-        dias = pres["dias_validez"] or 15
-        elements.append(Paragraph(f"Los presupuestos caducan a los {dias} días", cond_normal))
-    except (ValueError, TypeError):
-        elements.append(Paragraph("Los presupuestos caducan a los 15 días", cond_normal))
-
-    elements.append(Paragraph(
-        f"<b>Pago mediante transferencia bancaria: CC: {empresa_cuenta}</b>", cond_bold))
+        f"<b>Pago mediante transferencia bancaria: CC: {empresa_cuenta}</b>", s_bold))
 
     doc.build(elements)
     return filepath

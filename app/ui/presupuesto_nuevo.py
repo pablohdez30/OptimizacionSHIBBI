@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import messagebox, ttk
 import tkinter as tk
 from datetime import datetime
+from app.ui.scrollable_dropdown import ScrollableComboBox
 
 
 class NuevoPresupuestoView(ctk.CTkFrame):
@@ -37,13 +38,13 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         ctk.CTkButton(btn_frame, text="Guardar", width=100,
                       fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
                       command=self._guardar_con_mensaje).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Generar Excel", width=120,
+        ctk.CTkButton(btn_frame, text="Desglose Excel", width=120,
                       fg_color="#0077b6", hover_color="#005f8a",
                       command=self._generar_excel).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Generar PDF", width=110,
+        ctk.CTkButton(btn_frame, text="Exportar Presupuesto", width=160,
                       fg_color=self.app.COLOR_ACCENT,
                       hover_color=self.app.COLOR_ACCENT_HOVER,
-                      command=self._generar_pdf).pack(side="left", padx=5)
+                      command=self._exportar_presupuesto).pack(side="left", padx=5)
 
         # Scrollable content
         self.scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
@@ -66,12 +67,11 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         self.cliente_names = {c["nombre"]: c["id"] for c in clientes}
         self._all_client_values = sorted(self.cliente_names.keys())
 
-        self.cliente_combo = ctk.CTkComboBox(row1, values=self._all_client_values, width=280)
+        self.cliente_combo = ScrollableComboBox(row1, values=self._all_client_values, width=280,
+                                                     placeholder_text="Escribe para buscar...")
         self.cliente_combo.pack(side="left", padx=(10, 5))
         if self._all_client_values:
             self.cliente_combo.set(self._all_client_values[0])
-        # Bind typing to filter
-        self.cliente_combo.bind("<KeyRelease>", self._filter_clients)
 
         ctk.CTkButton(row1, text="+ Cliente", width=80, height=28,
                       fg_color="#6c757d", hover_color="#495057",
@@ -125,14 +125,6 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         self._build_summary()
         if not self.presupuesto_id:
             self._add_mueble()
-
-    def _filter_clients(self, event=None):
-        typed = self.cliente_combo.get().lower()
-        if typed:
-            filtered = [c for c in self._all_client_values if typed in c.lower()]
-        else:
-            filtered = self._all_client_values
-        self.cliente_combo.configure(values=filtered)
 
     def _build_summary(self):
         inner = ctk.CTkFrame(self.summary_card, fg_color="transparent")
@@ -286,11 +278,21 @@ class NuevoPresupuestoView(ctk.CTkFrame):
             if path := generar_excel_presupuesto(self.app, pid):
                 messagebox.showinfo("Excel generado", f"Archivo guardado en:\n{path}")
 
-    def _generar_pdf(self):
+    def _exportar_presupuesto(self):
+        """Export: Excel from template + PDF. Both saved in client folder."""
         if pid := self._guardar():
             from app.utils.pdf_generator import generar_pdf_presupuesto
-            if path := generar_pdf_presupuesto(self.app, pid):
-                messagebox.showinfo("PDF generado", f"Archivo guardado en:\n{path}")
+            from app.utils.excel_template import generar_excel_plantilla
+            paths = []
+            excel_path = generar_excel_plantilla(self.app, pid)
+            if excel_path:
+                paths.append(excel_path)
+            pdf_path = generar_pdf_presupuesto(self.app, pid)
+            if pdf_path:
+                paths.append(pdf_path)
+            if paths:
+                msg = "Archivos generados:\n" + "\n".join(paths)
+                messagebox.showinfo("Presupuesto exportado", msg)
 
 
 class MuebleFrame(ctk.CTkFrame):
