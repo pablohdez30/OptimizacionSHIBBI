@@ -152,7 +152,7 @@ class ScrollableComboBox(ctk.CTkFrame):
 
         self._listbox = tk.Listbox(
             list_frame,
-            font=("Segoe UI", 14),
+            font=("Segoe UI", 16),
             bg="#ffffff",
             fg="#1a1a2e",
             selectbackground="#e94560",
@@ -212,7 +212,7 @@ class ScrollableComboBox(ctk.CTkFrame):
         w = max(self._entry.winfo_width() + 34, 500)
 
         # Height: fill most of available screen space below the entry
-        item_h = 34
+        item_h = 38
         n_items = min(max(len(self._filtered), 1), 25)
         h = (n_items * item_h) + 28
 
