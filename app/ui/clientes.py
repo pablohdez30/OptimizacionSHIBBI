@@ -24,9 +24,10 @@ class ClientesView(ctk.CTkFrame):
                      font=ctk.CTkFont(size=24, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left", padx=30, pady=15)
 
-        # Search
+        # Search with debounce
         self.search_var = ctk.StringVar()
-        self.search_var.trace_add("write", lambda *_: self._cargar_clientes())
+        self._search_after_id = None
+        self.search_var.trace_add("write", lambda *_: self._debounce_search())
         search = ctk.CTkEntry(header, placeholder_text="Buscar cliente...",
                               width=250, textvariable=self.search_var)
         search.pack(side="left", padx=20, pady=15)
@@ -121,6 +122,11 @@ class ClientesView(ctk.CTkFrame):
                       command=self._limpiar_form).pack(side="right")
 
         self.editing_id = None
+
+    def _debounce_search(self):
+        if self._search_after_id:
+            self.after_cancel(self._search_after_id)
+        self._search_after_id = self.after(300, self._cargar_clientes)
 
     def _cargar_clientes(self):
         for w in self.list_scroll.winfo_children():

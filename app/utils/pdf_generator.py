@@ -22,10 +22,14 @@ def generar_pdf_presupuesto(app, presupuesto_id):
     empresa_cuenta = app.config_model.obtener("empresa_cuenta_bancaria") or ""
     iva_pct = app.config_model.obtener_float("iva_porcentaje", 21)
 
-    output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                               "output")
+    # Save in client folder
+    base_output = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                "output")
+    safe_name = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_"
+                        for c in pres["cliente_nombre"]).strip()
+    output_dir = os.path.join(base_output, safe_name)
     os.makedirs(output_dir, exist_ok=True)
-    filename = f"Presupuesto_{pres['numero_presupuesto']}_{pres['cliente_nombre'].replace(' ', '_')}.pdf"
+    filename = f"Presupuesto_{pres['numero_presupuesto']}.pdf"
     filepath = os.path.join(output_dir, filename)
 
     doc = SimpleDocTemplate(

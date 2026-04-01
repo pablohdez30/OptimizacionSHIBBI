@@ -36,7 +36,7 @@ class NuevoPresupuestoView(ctk.CTkFrame):
 
         ctk.CTkButton(btn_frame, text="Guardar", width=100,
                       fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
-                      command=self._guardar).pack(side="left", padx=5)
+                      command=self._guardar_con_mensaje).pack(side="left", padx=5)
         ctk.CTkButton(btn_frame, text="Generar Excel", width=120,
                       fg_color="#0077b6", hover_color="#005f8a",
                       command=self._generar_excel).pack(side="left", padx=5)
@@ -91,9 +91,15 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         self.fecha_entry.pack(side="left", padx=10)
         self.fecha_entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
 
-        # Row 2: Options
+        # Row 2: Proyecto + Options
         row2 = ctk.CTkFrame(info_inner, fg_color="transparent")
-        row2.pack(fill="x")
+        row2.pack(fill="x", pady=(0, 5))
+
+        ctk.CTkLabel(row2, text="Proyecto:", font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=self.app.COLOR_TEXT).pack(side="left")
+        self.proyecto_entry = ctk.CTkEntry(row2, width=300, height=30,
+                                            placeholder_text="Ej: Reforma cocina, Salón principal...")
+        self.proyecto_entry.pack(side="left", padx=(10, 20))
 
         ctk.CTkLabel(row2, text="Instalación:", font=ctk.CTkFont(size=13),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
@@ -101,9 +107,13 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         ctk.CTkCheckBox(row2, text="Incluida", variable=self.instalacion_var,
                         font=ctk.CTkFont(size=12)).pack(side="left", padx=10)
 
-        ctk.CTkLabel(row2, text="Notas internas:", font=ctk.CTkFont(size=13),
-                     text_color=self.app.COLOR_TEXT).pack(side="left", padx=(30, 0))
-        self.notas_entry = ctk.CTkEntry(row2, width=300, height=30,
+        # Row 3: Notas
+        row3 = ctk.CTkFrame(info_inner, fg_color="transparent")
+        row3.pack(fill="x")
+
+        ctk.CTkLabel(row3, text="Notas internas:", font=ctk.CTkFont(size=13),
+                     text_color=self.app.COLOR_TEXT).pack(side="left")
+        self.notas_entry = ctk.CTkEntry(row3, width=500, height=30,
                                          placeholder_text="Notas internas...")
         self.notas_entry.pack(side="left", padx=10)
 
@@ -194,21 +204,25 @@ class NuevoPresupuestoView(ctk.CTkFrame):
             self.cliente_combo.set(nombre.strip())
 
     def _guardar(self):
+        """Save the budget. Returns the presupuesto_id or None on failure."""
         cliente_nombre = self.cliente_combo.get()
         cliente_id = self.cliente_names.get(cliente_nombre)
         if not cliente_id:
             messagebox.showwarning("Aviso", "Selecciona un cliente válido.")
-            return
+            return None
 
         if not self.mueble_frames:
             messagebox.showwarning("Aviso", "Añade al menos un mueble/producto.")
-            return
+            return None
+
+        proyecto = self.proyecto_entry.get().strip()
 
         if self.presupuesto_id:
             # Update existing
             self.app.presupuesto_model.actualizar(
                 self.presupuesto_id,
                 cliente_id=cliente_id,
+                proyecto=proyecto,
                 notas_internas=self.notas_entry.get().strip(),
                 incluye_instalacion=1 if self.instalacion_var.get() else 0
             )
@@ -221,6 +235,7 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         else:
             pres_id = self.app.presupuesto_model.crear(
                 cliente_id,
+                proyecto=proyecto,
                 notas_internas=self.notas_entry.get().strip(),
                 incluye_instalacion=self.instalacion_var.get()
             )
@@ -265,7 +280,13 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         if pres:
             self.numero_label.configure(text=pres["numero_presupuesto"])
 
-        messagebox.showinfo("Guardado", f"Presupuesto guardado correctamente.")
+        return pres_id
+
+    def _guardar_con_mensaje(self):
+        """Save and show confirmation message."""
+        pres_id = self._guardar()
+        if pres_id:
+            messagebox.showinfo("Guardado", "Presupuesto guardado correctamente.")
 
     def _cargar_presupuesto(self):
         pres = self.app.presupuesto_model.obtener(self.presupuesto_id)
@@ -280,6 +301,8 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         except (ValueError, TypeError):
             self.fecha_entry.insert(0, pres["fecha"] or "")
 
+        self.proyecto_entry.delete(0, "end")
+        self.proyecto_entry.insert(0, pres["proyecto"] or "")
         self.instalacion_var.set(bool(pres["incluye_instalacion"]))
         self.notas_entry.delete(0, "end")
         self.notas_entry.insert(0, pres["notas_internas"] or "")
@@ -313,20 +336,22 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         self._update_summary()
 
     def _generar_excel(self):
-        if not self.presupuesto_id:
-            messagebox.showwarning("Aviso", "Guarda el presupuesto primero.")
+        # Auto-save first
+        pres_id = self._guardar()
+        if not pres_id:
             return
         from app.utils.excel_generator import generar_excel_presupuesto
-        path = generar_excel_presupuesto(self.app, self.presupuesto_id)
+        path = generar_excel_presupuesto(self.app, pres_id)
         if path:
             messagebox.showinfo("Excel generado", f"Archivo guardado en:\n{path}")
 
     def _generar_pdf(self):
-        if not self.presupuesto_id:
-            messagebox.showwarning("Aviso", "Guarda el presupuesto primero.")
+        # Auto-save first
+        pres_id = self._guardar()
+        if not pres_id:
             return
         from app.utils.pdf_generator import generar_pdf_presupuesto
-        path = generar_pdf_presupuesto(self.app, self.presupuesto_id)
+        path = generar_pdf_presupuesto(self.app, pres_id)
         if path:
             messagebox.showinfo("PDF generado", f"Archivo guardado en:\n{path}")
 
@@ -385,7 +410,7 @@ class MuebleFrame(ctk.CTkFrame):
         # Table header
         th = ctk.CTkFrame(table_frame, fg_color="#f0f2f5", corner_radius=4)
         th.pack(fill="x", pady=(0, 3))
-        cols = [("Categoría", 140), ("Proveedor", 140), ("Descripción", 200),
+        cols = [("Categoría", 140), ("Proveedor", 140), ("Material", 160),
                 ("Cant.", 60), ("Precio Ud.", 80), ("Total", 80)]
         for text, width in cols:
             ctk.CTkLabel(th, text=text, width=width,
@@ -484,32 +509,37 @@ class MuebleFrame(ctk.CTkFrame):
 
 
 class DetailRow(ctk.CTkFrame):
-    """A single cost detail row (material, labor, etc.)."""
+    """A single cost detail row with proveedor material dropdown + auto-fill price."""
 
     def __init__(self, parent, app, mueble, data=None):
         super().__init__(parent, fg_color="transparent", height=32)
         self.app = app
         self.mueble = mueble
+        self._prov_materials = {}  # Cache: {prov_name: [{desc, precio, unidad}, ...]}
 
         categorias = app.categoria_model.listar()
         cat_names = [c["nombre"] for c in categorias]
 
         proveedores = app.proveedor_model.listar()
-        prov_names = [""] + [p["nombre"] for p in proveedores]
+        prov_names = ["(manual)"] + [p["nombre"] for p in proveedores]
+        self._prov_ids = {p["nombre"]: p["id"] for p in proveedores}
 
         self.cat_combo = ctk.CTkComboBox(self, values=cat_names, width=140, height=28,
                                           font=ctk.CTkFont(size=12))
         self.cat_combo.pack(side="left", padx=4)
 
         self.prov_combo = ctk.CTkComboBox(self, values=prov_names, width=140, height=28,
-                                           font=ctk.CTkFont(size=12))
+                                           font=ctk.CTkFont(size=12),
+                                           command=self._on_proveedor_change)
         self.prov_combo.pack(side="left", padx=4)
-        self.prov_combo.set("")
+        self.prov_combo.set("(manual)")
 
-        self.desc_entry = ctk.CTkEntry(self, width=200, height=28,
-                                        font=ctk.CTkFont(size=12),
-                                        placeholder_text="Descripción...")
-        self.desc_entry.pack(side="left", padx=4)
+        # Material: either free text or dropdown depending on proveedor
+        self.desc_combo = ctk.CTkComboBox(self, values=[], width=160, height=28,
+                                           font=ctk.CTkFont(size=12),
+                                           command=self._on_material_select)
+        self.desc_combo.pack(side="left", padx=4)
+        self.desc_combo.set("")
 
         self.cant_entry = ctk.CTkEntry(self, width=60, height=28,
                                         font=ctk.CTkFont(size=12))
@@ -536,7 +566,6 @@ class DetailRow(ctk.CTkFrame):
         # Bind recalculation
         self.cant_entry.bind("<KeyRelease>", lambda e: self._on_change())
         self.precio_entry.bind("<KeyRelease>", lambda e: self._on_change())
-        self.margen_bind_id = None
 
         # Load data
         if data:
@@ -544,9 +573,9 @@ class DetailRow(ctk.CTkFrame):
                 self.cat_combo.set(data["categoria"])
             if data.get("proveedor"):
                 self.prov_combo.set(data["proveedor"])
+                self._load_proveedor_materials(data["proveedor"])
             if data.get("descripcion"):
-                self.desc_entry.delete(0, "end")
-                self.desc_entry.insert(0, data["descripcion"])
+                self.desc_combo.set(data["descripcion"])
             if data.get("cantidad"):
                 self.cant_entry.delete(0, "end")
                 self.cant_entry.insert(0, str(data["cantidad"]))
@@ -555,6 +584,44 @@ class DetailRow(ctk.CTkFrame):
                 self.precio_entry.insert(0, str(data["precio_unitario"]))
 
         self._on_change()
+
+    def _on_proveedor_change(self, prov_name):
+        """When proveedor changes, load their materials into the dropdown."""
+        if prov_name == "(manual)" or not prov_name:
+            self.desc_combo.configure(values=[])
+            self.desc_combo.set("")
+            return
+        self._load_proveedor_materials(prov_name)
+
+    def _load_proveedor_materials(self, prov_name):
+        """Load materials from a proveedor into the description dropdown."""
+        prov_id = self._prov_ids.get(prov_name)
+        if not prov_id:
+            return
+
+        materiales = self.app.historico_model.materiales_actuales_proveedor(prov_id)
+        self._prov_materials[prov_name] = {
+            m["descripcion_material"]: m for m in materiales
+        }
+
+        mat_names = [m["descripcion_material"] for m in materiales]
+        self.desc_combo.configure(values=mat_names)
+        if mat_names:
+            self.desc_combo.set(mat_names[0])
+            self._on_material_select(mat_names[0])
+
+    def _on_material_select(self, material_name):
+        """When a material is selected from dropdown, auto-fill the price."""
+        prov_name = self.prov_combo.get()
+        if prov_name in self._prov_materials:
+            mat_data = self._prov_materials[prov_name].get(material_name)
+            if mat_data:
+                self.precio_entry.delete(0, "end")
+                self.precio_entry.insert(0, str(mat_data["precio"]))
+                # Also set the category
+                if mat_data.get("categoria_nombre"):
+                    self.cat_combo.set(mat_data["categoria_nombre"])
+                self._on_change()
 
     def _on_change(self):
         total = self.get_total()
@@ -578,10 +645,13 @@ class DetailRow(ctk.CTkFrame):
             precio = float(self.precio_entry.get().replace(",", "."))
         except ValueError:
             precio = 0
+        prov = self.prov_combo.get()
+        if prov == "(manual)":
+            prov = ""
         return {
             "categoria": self.cat_combo.get(),
-            "proveedor": self.prov_combo.get(),
-            "descripcion": self.desc_entry.get().strip(),
+            "proveedor": prov,
+            "descripcion": self.desc_combo.get().strip(),
             "cantidad": cant,
             "precio_unitario": precio,
         }

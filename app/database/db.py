@@ -70,6 +70,7 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 numero_presupuesto TEXT NOT NULL UNIQUE,
                 cliente_id INTEGER NOT NULL,
+                proyecto TEXT DEFAULT '',
                 fecha TEXT NOT NULL,
                 estado TEXT DEFAULT 'Borrador',
                 version INTEGER DEFAULT 1,
@@ -122,6 +123,13 @@ class Database:
             );
         """)
         self.conn.commit()
+
+        # Migration: add proyecto column if missing (for existing DBs)
+        try:
+            cursor.execute("SELECT proyecto FROM presupuestos LIMIT 1")
+        except sqlite3.OperationalError:
+            cursor.execute("ALTER TABLE presupuestos ADD COLUMN proyecto TEXT DEFAULT ''")
+            self.conn.commit()
 
     def _seed_defaults(self):
         cursor = self.conn.cursor()

@@ -136,6 +136,15 @@ class HistoricoPreciosModel:
             (proveedor_id,)
         )
 
+    def materiales_actuales_proveedor(self, proveedor_id):
+        """Get latest price for each unique material from a supplier."""
+        all_items = self.historial_por_proveedor(proveedor_id)
+        seen = {}
+        for h in all_items:
+            if h["descripcion_material"] not in seen:
+                seen[h["descripcion_material"]] = h
+        return list(seen.values())
+
     def historial_por_material(self, descripcion_material):
         return self.db.fetchall(
             """SELECT h.*, p.nombre as proveedor_nombre
@@ -163,7 +172,7 @@ class PresupuestoModel:
             seq = 1
         return f"{year}-{seq:03d}"
 
-    def crear(self, cliente_id, notas_internas="", condiciones_pago=None,
+    def crear(self, cliente_id, proyecto="", notas_internas="", condiciones_pago=None,
               dias_validez=None, incluye_instalacion=False):
         numero = self._generar_numero()
         if condiciones_pago is None:
@@ -178,10 +187,10 @@ class PresupuestoModel:
             dias_validez = int(conf["valor"]) if conf else 15
 
         return self.db.execute(
-            """INSERT INTO presupuestos (numero_presupuesto, cliente_id, fecha, estado,
+            """INSERT INTO presupuestos (numero_presupuesto, cliente_id, proyecto, fecha, estado,
                notas_internas, condiciones_pago, dias_validez, incluye_instalacion)
-               VALUES (?, ?, ?, 'Borrador', ?, ?, ?, ?)""",
-            (numero, cliente_id, datetime.now().strftime("%Y-%m-%d"),
+               VALUES (?, ?, ?, ?, 'Borrador', ?, ?, ?, ?)""",
+            (numero, cliente_id, proyecto, datetime.now().strftime("%Y-%m-%d"),
              notas_internas, condiciones_pago, dias_validez,
              1 if incluye_instalacion else 0)
         ).lastrowid
@@ -233,6 +242,7 @@ class PresupuestoModel:
             return None
         nuevo_id = self.crear(
             original["cliente_id"],
+            proyecto=original["proyecto"] or "",
             notas_internas=original["notas_internas"],
             condiciones_pago=original["condiciones_pago"],
             dias_validez=original["dias_validez"],

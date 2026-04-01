@@ -50,8 +50,8 @@ class PresupuestosView(ctk.CTkFrame):
         # Table header
         th = ctk.CTkFrame(table_frame, fg_color="#f8f9fa", corner_radius=0)
         th.pack(fill="x", padx=10, pady=(10, 2))
-        cols = [("Nº", 80), ("Cliente", 200), ("Fecha", 100), ("Estado", 120),
-                ("Total (IVA inc.)", 130), ("Acciones", 260)]
+        cols = [("Nº", 80), ("Cliente", 170), ("Proyecto", 140), ("Fecha", 90),
+                ("Estado", 110), ("Total", 110), ("Acciones", 260)]
         for text, width in cols:
             ctk.CTkLabel(th, text=text, width=width,
                          font=ctk.CTkFont(size=12, weight="bold"),
@@ -94,20 +94,23 @@ class PresupuestosView(ctk.CTkFrame):
 
             ctk.CTkLabel(row, text=p["numero_presupuesto"], width=80,
                          font=ctk.CTkFont(size=13),
-                         text_color=self.app.COLOR_TEXT, anchor="w").pack(side="left", padx=8)
-            ctk.CTkLabel(row, text=p["cliente_nombre"], width=200,
+                         text_color=self.app.COLOR_TEXT, anchor="w").pack(side="left", padx=6)
+            ctk.CTkLabel(row, text=p["cliente_nombre"], width=170,
                          font=ctk.CTkFont(size=13),
-                         text_color=self.app.COLOR_TEXT, anchor="w").pack(side="left", padx=8)
-            ctk.CTkLabel(row, text=p["fecha"], width=100,
+                         text_color=self.app.COLOR_TEXT, anchor="w").pack(side="left", padx=6)
+            ctk.CTkLabel(row, text=p["proyecto"] or "", width=140,
+                         font=ctk.CTkFont(size=12),
+                         text_color=self.app.COLOR_TEXT_LIGHT, anchor="w").pack(side="left", padx=6)
+            ctk.CTkLabel(row, text=p["fecha"], width=90,
                          font=ctk.CTkFont(size=13),
-                         text_color=self.app.COLOR_TEXT, anchor="w").pack(side="left", padx=8)
-            ctk.CTkLabel(row, text=p["estado"], width=120,
+                         text_color=self.app.COLOR_TEXT, anchor="w").pack(side="left", padx=6)
+            ctk.CTkLabel(row, text=p["estado"], width=110,
                          font=ctk.CTkFont(size=12, weight="bold"),
                          text_color=estado_colors.get(p["estado"], "#6c757d"),
-                         anchor="w").pack(side="left", padx=8)
-            ctk.CTkLabel(row, text=f"{total_iva:,.2f}€", width=130,
+                         anchor="w").pack(side="left", padx=6)
+            ctk.CTkLabel(row, text=f"{total_iva:,.2f}€", width=110,
                          font=ctk.CTkFont(size=13, weight="bold"),
-                         text_color=self.app.COLOR_TEXT, anchor="w").pack(side="left", padx=8)
+                         text_color=self.app.COLOR_TEXT, anchor="w").pack(side="left", padx=6)
 
             # Action buttons
             actions = ctk.CTkFrame(row, fg_color="transparent")
