@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from openpyxl import load_workbook
 from openpyxl.styles import Font
+from openpyxl.drawing.image import Image as XlImage
 
 
 def generar_excel_plantilla(app, presupuesto_id):
@@ -26,9 +27,19 @@ def generar_excel_plantilla(app, presupuesto_id):
     empresa_cuenta = app.config_model.obtener("empresa_cuenta_bancaria") or ""
     iva_pct = app.config_model.obtener_float("iva_porcentaje", 21)
 
-    # Load template (preserves images, formatting)
+    # Load template
     wb = load_workbook(template_path)
     ws = wb.active
+
+    # Add logo image (original EMF is dropped by openpyxl, so we add JPG)
+    logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              "assets", "logo_shibbi.jpg")
+    if os.path.exists(logo_path):
+        logo = XlImage(logo_path)
+        # Scale to match original template size (~4cm wide in the top-left)
+        logo.width = 180
+        logo.height = 30
+        ws.add_image(logo, "A1")
 
     # Fill company data
     ws["E1"] = empresa_nombre
