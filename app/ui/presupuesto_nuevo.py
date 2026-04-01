@@ -144,19 +144,33 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         summary = ctk.CTkFrame(inner, fg_color="transparent")
         summary.pack(side="right")
         iva_pct = self.app.config_model.obtener_float("iva_porcentaje", 21)
-        self._lbl_base = ctk.CTkLabel(summary, text="0,00€", font=ctk.CTkFont(size=14),
+
+        # Row: Base imponible
+        r1 = ctk.CTkFrame(summary, fg_color="transparent")
+        r1.pack(fill="x", pady=2)
+        ctk.CTkLabel(r1, text="Base imponible:", font=ctk.CTkFont(size=14), width=150,
+                     text_color=self.app.COLOR_TEXT, anchor="e").pack(side="left")
+        self._lbl_base = ctk.CTkLabel(r1, text="0,00€", font=ctk.CTkFont(size=14),
                                        width=120, text_color=self.app.COLOR_TEXT, anchor="e")
-        self._lbl_iva = ctk.CTkLabel(summary, text="0,00€", font=ctk.CTkFont(size=14),
+        self._lbl_base.pack(side="left", padx=(10, 0))
+
+        # Row: IVA
+        r2 = ctk.CTkFrame(summary, fg_color="transparent")
+        r2.pack(fill="x", pady=2)
+        ctk.CTkLabel(r2, text=f"IVA {iva_pct:.0f}%:", font=ctk.CTkFont(size=14), width=150,
+                     text_color=self.app.COLOR_TEXT, anchor="e").pack(side="left")
+        self._lbl_iva = ctk.CTkLabel(r2, text="0,00€", font=ctk.CTkFont(size=14),
                                       width=120, text_color=self.app.COLOR_TEXT, anchor="e")
-        self._lbl_total = ctk.CTkLabel(summary, text="0,00€", font=ctk.CTkFont(size=16, weight="bold"),
+        self._lbl_iva.pack(side="left", padx=(10, 0))
+
+        # Row: TOTAL
+        r3 = ctk.CTkFrame(summary, fg_color="transparent")
+        r3.pack(fill="x", pady=2)
+        ctk.CTkLabel(r3, text="TOTAL:", font=ctk.CTkFont(size=16, weight="bold"), width=150,
+                     text_color=self.app.COLOR_TEXT, anchor="e").pack(side="left")
+        self._lbl_total = ctk.CTkLabel(r3, text="0,00€", font=ctk.CTkFont(size=16, weight="bold"),
                                         width=120, text_color=self.app.COLOR_ACCENT, anchor="e")
-        for text, vlbl in [("Base imponible:", self._lbl_base),
-                           (f"IVA {iva_pct:.0f}%:", self._lbl_iva), ("TOTAL:", self._lbl_total)]:
-            row = ctk.CTkFrame(summary, fg_color="transparent")
-            row.pack(fill="x", pady=2)
-            ctk.CTkLabel(row, text=text, font=vlbl.cget("font"), width=150,
-                         text_color=self.app.COLOR_TEXT, anchor="e").pack(side="left")
-            vlbl.pack(in_=row, side="left", padx=(10, 0))
+        self._lbl_total.pack(side="left", padx=(10, 0))
 
     def _update_summary(self):
         total_base = sum(mf.get_precio_cliente() * mf.get_cantidad() for mf in self.mueble_frames)
