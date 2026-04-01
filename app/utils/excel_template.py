@@ -125,5 +125,14 @@ def generar_excel_plantilla(app, presupuesto_id):
     os.makedirs(output_dir, exist_ok=True)
     filename = f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}.xlsx"
     filepath = os.path.join(output_dir, filename)
+    # If file locked, use timestamped name
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "ab") as f:
+                pass
+        except PermissionError:
+            from datetime import datetime as dt
+            ts = dt.now().strftime("%H%M%S")
+            filepath = os.path.join(output_dir, f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}_{ts}.xlsx")
     wb.save(filepath)
     return filepath

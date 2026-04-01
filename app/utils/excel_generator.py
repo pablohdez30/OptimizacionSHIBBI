@@ -165,5 +165,12 @@ def generar_excel_presupuesto(app, presupuesto_id):
     os.makedirs(output_dir, exist_ok=True)
     filename = f"Desglose_{pres['numero_presupuesto']}_{safe_name}.xlsx"
     filepath = os.path.join(output_dir, filename)
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "ab") as f:
+                pass
+        except PermissionError:
+            ts = datetime.now().strftime("%H%M%S")
+            filepath = os.path.join(output_dir, f"Desglose_{pres['numero_presupuesto']}_{safe_name}_{ts}.xlsx")
     wb.save(filepath)
     return filepath

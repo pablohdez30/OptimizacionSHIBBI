@@ -38,10 +38,7 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         ctk.CTkButton(btn_frame, text="Guardar", width=100,
                       fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
                       command=self._guardar_con_mensaje).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Desglose Excel", width=120,
-                      fg_color="#0077b6", hover_color="#005f8a",
-                      command=self._generar_excel).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Exportar Presupuesto", width=160,
+        ctk.CTkButton(btn_frame, text="Exportar Presupuesto", width=180,
                       fg_color=self.app.COLOR_ACCENT,
                       hover_color=self.app.COLOR_ACCENT_HOVER,
                       command=self._exportar_presupuesto).pack(side="left", padx=5)
@@ -272,27 +269,40 @@ class NuevoPresupuestoView(ctk.CTkFrame):
                               "precio_unitario": d["precio_unitario"]} for d in detalles]})
         self._update_summary()
 
-    def _generar_excel(self):
-        if pid := self._guardar():
-            from app.utils.excel_generator import generar_excel_presupuesto
-            if path := generar_excel_presupuesto(self.app, pid):
-                messagebox.showinfo("Excel generado", f"Archivo guardado en:\n{path}")
-
     def _exportar_presupuesto(self):
-        """Export: Excel from template + PDF. Both saved in client folder."""
-        if pid := self._guardar():
-            from app.utils.pdf_generator import generar_pdf_presupuesto
-            from app.utils.excel_template import generar_excel_plantilla
-            paths = []
-            excel_path = generar_excel_plantilla(self.app, pid)
-            if excel_path:
-                paths.append(excel_path)
-            pdf_path = generar_pdf_presupuesto(self.app, pid)
-            if pdf_path:
-                paths.append(pdf_path)
-            if paths:
-                msg = "Archivos generados:\n" + "\n".join(paths)
-                messagebox.showinfo("Presupuesto exportado", msg)
+        """Export all: Excel presupuesto (template) + PDF + Excel desglose."""
+        pid = self._guardar()
+        if not pid:
+            return
+        from app.utils.pdf_generator import generar_pdf_presupuesto
+        from app.utils.excel_template import generar_excel_plantilla
+        from app.utils.excel_generator import generar_excel_presupuesto
+
+        paths = []
+        errors = []
+
+        for name, func in [("Excel presupuesto", generar_excel_plantilla),
+                            ("PDF presupuesto", generar_pdf_presupuesto),
+                            ("Excel desglose", generar_excel_presupuesto)]:
+            try:
+                path = func(self.app, pid)
+                if path:
+                    paths.append(path)
+            except PermissionError:
+                errors.append(f"{name}: archivo abierto, ciérralo primero")
+            except Exception as e:
+                errors.append(f"{name}: {str(e)}")
+
+        msg = ""
+        if paths:
+            msg += "Archivos generados:\n" + "\n".join(f"  {p}" for p in paths)
+        if errors:
+            msg += "\n\nErrores:\n" + "\n".join(f"  {e}" for e in errors)
+
+        if errors:
+            messagebox.showwarning("Exportación parcial", msg)
+        elif paths:
+            messagebox.showinfo("Presupuesto exportado", msg)
 
 
 class MuebleFrame(ctk.CTkFrame):

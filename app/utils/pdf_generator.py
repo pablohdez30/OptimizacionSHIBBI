@@ -30,6 +30,16 @@ def generar_pdf_presupuesto(app, presupuesto_id):
     filename = f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}.pdf"
     filepath = os.path.join(output_dir, filename)
 
+    # If file is locked (open in another app), use timestamped name
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "ab") as f:
+                pass  # Test if writable
+        except PermissionError:
+            ts = datetime.now().strftime("%H%M%S")
+            filename = f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}_{ts}.pdf"
+            filepath = os.path.join(output_dir, filename)
+
     # Colors
     black = HexColor("#000000")
     border_color = HexColor("#000000")
