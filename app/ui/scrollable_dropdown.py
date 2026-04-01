@@ -39,9 +39,8 @@ class ScrollableComboBox(ctk.CTkFrame):
                                    command=self._toggle_dropdown)
         self._btn.pack(side="left", padx=(2, 0))
 
-        # Bindings
+        # Bindings - NO FocusIn (was creating Toplevel on every focus, blocking event loop)
         self._entry.bind("<KeyRelease>", self._on_key)
-        self._entry.bind("<FocusIn>", lambda e: self._open_dropdown())
         self._entry.bind("<Escape>", lambda e: self._close_dropdown())
 
     def get(self):

@@ -206,6 +206,12 @@ class NuevoPresupuestoView(ctk.CTkFrame):
             DetailRow._cached_cat_names = None
 
     def _guardar(self):
+        # Force recalculation of all rows before saving
+        for mf in self.mueble_frames:
+            for dr in mf.detail_rows:
+                dr._update_total()
+            mf._recalculate()
+
         cliente_nombre = self.cliente_combo.get()
         cliente_id = self.cliente_names.get(cliente_nombre)
         if not cliente_id:
@@ -411,7 +417,7 @@ class DetailRow(ctk.CTkFrame):
     def __init__(self, parent, app, mueble, data=None):
         super().__init__(parent, fg_color="transparent", height=38)
         self.app = app; self.mueble = mueble
-        self._prov_materials = {}; self._recalc_id = None
+        self._prov_materials = {}
 
         if DetailRow._cached_cat_names is None:
             DetailRow._cached_cat_names = [c["nombre"] for c in app.categoria_model.listar()]
@@ -459,8 +465,13 @@ class DetailRow(ctk.CTkFrame):
                       font=ctk.CTkFont(size=11),
                       command=lambda: mueble._remove_detail_row(self)).pack(side="left", padx=3)
 
-        self.cant_entry.bind("<KeyRelease>", lambda e: self._debounce())
-        self.precio_entry.bind("<KeyRelease>", lambda e: self._debounce())
+        # Recalculate ONLY when leaving the field (not on every keystroke)
+        # This eliminates lag: no canvas redraws while typing
+        self.cant_entry.bind("<FocusOut>", lambda e: self._recalc())
+        self.precio_entry.bind("<FocusOut>", lambda e: self._recalc())
+        # Also recalc on Enter key for convenience
+        self.cant_entry.bind("<Return>", lambda e: self._recalc())
+        self.precio_entry.bind("<Return>", lambda e: self._recalc())
 
         if data:
             if data.get("categoria"): self.cat_var.set(data["categoria"])
@@ -483,7 +494,7 @@ class DetailRow(ctk.CTkFrame):
         if cat == "Mano de Obra":
             self.precio_entry.delete(0, "end")
             self.precio_entry.insert(0, str(DetailRow._cached_precio_hora))
-            self.desc_combo.set("Mano de obra"); self._debounce()
+            self.desc_combo.set("Mano de obra"); self._recalc()
 
     def _on_proveedor_change(self, prov):
         if prov == "(manual)":
@@ -507,11 +518,7 @@ class DetailRow(ctk.CTkFrame):
                 self.precio_entry.delete(0, "end"); self.precio_entry.insert(0, str(md["precio"]))
                 cn = md["categoria_nombre"]
                 if cn: self.cat_var.set(cn)
-                self._debounce()
-
-    def _debounce(self):
-        if self._recalc_id: self.after_cancel(self._recalc_id)
-        self._recalc_id = self.after(300, self._recalc)
+                self._recalc()
 
     def _recalc(self):
         self._update_total(); self.mueble._recalculate()
