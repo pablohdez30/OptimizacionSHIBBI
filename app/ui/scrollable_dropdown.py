@@ -183,6 +183,9 @@ class ScrollableComboBox(ctk.CTkFrame):
         self._dropdown_win.lift()
         self._dropdown_win.attributes("-topmost", True)
 
+        # Close dropdown when clicking anywhere outside it
+        self.winfo_toplevel().bind("<Button-1>", self._on_global_click, add=True)
+
     def _refresh_listbox(self):
         """Update listbox contents from filtered list."""
         if not self._listbox:
@@ -262,7 +265,29 @@ class ScrollableComboBox(ctk.CTkFrame):
             pass
         self._close_dropdown()
 
+    def _on_global_click(self, event=None):
+        """Close dropdown if click is outside entry and dropdown."""
+        if not self._dropdown_open:
+            return
+        try:
+            w = event.widget
+            # Check if click is on the entry, button, or inside the dropdown
+            if w == self._entry._entry or w == self._entry or w == self._btn:
+                return
+            if self._dropdown_win and str(w).startswith(str(self._dropdown_win)):
+                return
+            if self._listbox and (w == self._listbox):
+                return
+        except (AttributeError, tk.TclError):
+            pass
+        self._close_dropdown()
+
     def _close_dropdown(self):
+        # Unbind global click
+        try:
+            self.winfo_toplevel().unbind("<Button-1>")
+        except (tk.TclError, AttributeError):
+            pass
         if self._dropdown_win:
             try:
                 self._dropdown_win.destroy()
