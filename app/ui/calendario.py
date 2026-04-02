@@ -58,10 +58,10 @@ class CalendarioView(ctk.CTkFrame):
         self.cal_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(10, 15))
         for i in range(7):
             self.cal_frame.grid_columnconfigure(i, weight=1, uniform="day")
-        # Row 0 = headers, rows 1-6 = weeks
+        # Row 0 = headers, rows 1-6 = weeks (uniform = all same height)
         self.cal_frame.grid_rowconfigure(0, weight=0)
         for i in range(1, 7):
-            self.cal_frame.grid_rowconfigure(i, weight=1)
+            self.cal_frame.grid_rowconfigure(i, weight=1, uniform="week")
 
         # Day name headers (row 0 of the grid)
         for i, day_name in enumerate(self.DIAS):

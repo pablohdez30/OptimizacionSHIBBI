@@ -28,6 +28,16 @@ class ShibbiShopApp(ctk.CTk):
 
         self.title("ShibbiShop Manager")
         self.geometry("1400x850")
+
+        # Set app icon
+        import os as _os
+        _icon_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                                    "..", "assets", "icon.png")
+        if _os.path.exists(_icon_path):
+            from PIL import Image as _PILImage, ImageTk as _ImageTk
+            _icon = _PILImage.open(_icon_path)
+            self._icon_photo = _ImageTk.PhotoImage(_icon)
+            self.iconphoto(True, self._icon_photo)
         self.minsize(1024, 600)
 
         ctk.set_appearance_mode("light")

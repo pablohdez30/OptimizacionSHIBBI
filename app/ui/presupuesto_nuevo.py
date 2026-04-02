@@ -72,75 +72,81 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         info_card.pack(fill="x", pady=(0, 10))
         info_inner = ctk.CTkFrame(info_card, fg_color="transparent")
         info_inner.pack(fill="x", padx=20, pady=15)
+        info_inner.grid_columnconfigure(1, weight=1)
 
-        # Row 1: Client (searchable) + Nº + Fecha
-        row1 = ctk.CTkFrame(info_inner, fg_color="transparent")
-        row1.pack(fill="x", pady=(0, 8))
-        ctk.CTkLabel(row1, text="Cliente:", font=ctk.CTkFont(size=13, weight="bold"),
-                     text_color=self.app.COLOR_TEXT).pack(side="left")
+        LABEL_W = 110  # Fixed width for all labels to align inputs
+
+        # Row 0: Client + Nº + Fecha
+        ctk.CTkLabel(info_inner, text="Cliente:", font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=self.app.COLOR_TEXT, width=LABEL_W, anchor="w"
+                     ).grid(row=0, column=0, sticky="w", pady=(0, 5))
 
         clientes = self.app.cliente_model.listar()
         self.cliente_names = {c["nombre"]: c["id"] for c in clientes}
         self._all_client_values = sorted(self.cliente_names.keys())
 
-        self.cliente_combo = ScrollableComboBox(row1, values=self._all_client_values, width=350,
+        row0_right = ctk.CTkFrame(info_inner, fg_color="transparent")
+        row0_right.grid(row=0, column=1, sticky="w", pady=(0, 5))
+
+        self.cliente_combo = ScrollableComboBox(row0_right, values=self._all_client_values, width=350,
                                                      height=34,
                                                      placeholder_text="Escribe para buscar...")
-        self.cliente_combo.pack(side="left", padx=(10, 5))
+        self.cliente_combo.pack(side="left")
         if self._all_client_values:
             self.cliente_combo.set(self._all_client_values[0])
 
-        ctk.CTkButton(row1, text="+ Cliente", width=80, height=28,
+        ctk.CTkButton(row0_right, text="+ Cliente", width=80, height=28,
                       fg_color="#6c757d", hover_color="#495057",
                       font=ctk.CTkFont(size=12),
-                      command=self._quick_new_client).pack(side="left", padx=(0, 20))
-        ctk.CTkLabel(row1, text="Nº:", font=ctk.CTkFont(size=13, weight="bold"),
+                      command=self._quick_new_client).pack(side="left", padx=(5, 20))
+        ctk.CTkLabel(row0_right, text="Nº:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.numero_label = ctk.CTkLabel(row1, text="(auto)", font=ctk.CTkFont(size=13),
+        self.numero_label = ctk.CTkLabel(row0_right, text="(auto)", font=ctk.CTkFont(size=13),
                                           text_color=self.app.COLOR_TEXT_LIGHT)
         self.numero_label.pack(side="left", padx=10)
-        ctk.CTkLabel(row1, text="Fecha:", font=ctk.CTkFont(size=13, weight="bold"),
+        ctk.CTkLabel(row0_right, text="Fecha:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left", padx=(20, 0))
-        self.fecha_entry = ctk.CTkEntry(row1, width=110, height=30)
+        self.fecha_entry = ctk.CTkEntry(row0_right, width=110, height=30)
         self.fecha_entry.pack(side="left", padx=10)
         self.fecha_entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
 
-        # Row 2: Proyecto + Instalación
-        row2 = ctk.CTkFrame(info_inner, fg_color="transparent")
-        row2.pack(fill="x", pady=(0, 5))
-        ctk.CTkLabel(row2, text="Proyecto:", font=ctk.CTkFont(size=13, weight="bold"),
-                     text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.proyecto_entry = ctk.CTkEntry(row2, width=300, height=30,
+        # Row 1: Proyecto + Instalación
+        ctk.CTkLabel(info_inner, text="Proyecto:", font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=self.app.COLOR_TEXT, width=LABEL_W, anchor="w"
+                     ).grid(row=1, column=0, sticky="w", pady=(0, 5))
+
+        row1_right = ctk.CTkFrame(info_inner, fg_color="transparent")
+        row1_right.grid(row=1, column=1, sticky="w", pady=(0, 5))
+        self.proyecto_entry = ctk.CTkEntry(row1_right, width=300, height=30,
                                             placeholder_text="Ej: Reforma cocina, Salón principal...")
-        self.proyecto_entry.pack(side="left", padx=(10, 20))
-        ctk.CTkLabel(row2, text="Instalación:", font=ctk.CTkFont(size=13),
+        self.proyecto_entry.pack(side="left", padx=(0, 20))
+        ctk.CTkLabel(row1_right, text="Instalación:", font=ctk.CTkFont(size=13),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
         self.instalacion_var = ctk.BooleanVar(value=False)
-        ctk.CTkCheckBox(row2, text="Incluida", variable=self.instalacion_var,
+        ctk.CTkCheckBox(row1_right, text="Incluida", variable=self.instalacion_var,
                         font=ctk.CTkFont(size=12)).pack(side="left", padx=10)
 
-        # Row 3: Condiciones de pago + Notas
-        row3 = ctk.CTkFrame(info_inner, fg_color="transparent")
-        row3.pack(fill="x", pady=(0, 5))
-        ctk.CTkLabel(row3, text="Condiciones:", font=ctk.CTkFont(size=13),
-                     text_color=self.app.COLOR_TEXT).pack(side="left")
+        # Row 2: Condiciones de pago
+        ctk.CTkLabel(info_inner, text="Condiciones:", font=ctk.CTkFont(size=13),
+                     text_color=self.app.COLOR_TEXT, width=LABEL_W, anchor="w"
+                     ).grid(row=2, column=0, sticky="w", pady=(0, 5))
         condiciones_opciones = [
             "50% adelanto - 50% antes de la entrega del trabajo.",
             "70% adelanto - 30% antes de la entrega del trabajo.",
             "100% adelanto.",
         ]
-        self.condiciones_combo = ctk.CTkComboBox(row3, values=condiciones_opciones, width=420, height=30,
-                                                   font=ctk.CTkFont(size=11))
-        self.condiciones_combo.pack(side="left", padx=(10, 0))
+        self.condiciones_combo = ctk.CTkComboBox(info_inner, values=condiciones_opciones,
+                                                   width=420, height=30, font=ctk.CTkFont(size=11))
+        self.condiciones_combo.grid(row=2, column=1, sticky="w", pady=(0, 5))
         self.condiciones_combo.set(condiciones_opciones[0])
 
-        row4 = ctk.CTkFrame(info_inner, fg_color="transparent")
-        row4.pack(fill="x")
-        ctk.CTkLabel(row4, text="Notas internas:", font=ctk.CTkFont(size=13),
-                     text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.notas_entry = ctk.CTkEntry(row4, width=500, height=30,
+        # Row 3: Notas
+        ctk.CTkLabel(info_inner, text="Notas internas:", font=ctk.CTkFont(size=13),
+                     text_color=self.app.COLOR_TEXT, width=LABEL_W, anchor="w"
+                     ).grid(row=3, column=0, sticky="w", pady=(0, 3))
+        self.notas_entry = ctk.CTkEntry(info_inner, width=500, height=30,
                                          placeholder_text="Notas internas...")
-        self.notas_entry.pack(side="left", padx=10)
+        self.notas_entry.grid(row=3, column=1, sticky="w", pady=(0, 3))
 
         # --- Furniture items ---
         self.muebles_container = ctk.CTkFrame(self.scroll, fg_color="transparent")
