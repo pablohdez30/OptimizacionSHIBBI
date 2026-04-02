@@ -355,6 +355,151 @@ class PresupuestoModel:
         return total
 
 
+class FacturaModel:
+    def __init__(self, db):
+        self.db = db
+
+    def _generar_numero(self):
+        year = datetime.now().strftime("%y")
+        ultimo = self.db.fetchone(
+            "SELECT numero_factura FROM facturas WHERE numero_factura LIKE ? ORDER BY id DESC LIMIT 1",
+            (f"{year}-%",)
+        )
+        if ultimo:
+            seq = int(ultimo["numero_factura"].split("-")[1]) + 1
+        else:
+            seq = 1
+        return f"{year}-{seq:03d}"
+
+    def crear(self, cliente_id, presupuesto_id=None, proyecto="",
+              notas_internas="", adelanto_descripcion="", adelanto_importe=0):
+        numero = self._generar_numero()
+        return self.db.execute(
+            """INSERT INTO facturas (numero_factura, presupuesto_id, cliente_id, proyecto,
+               fecha, notas_internas, adelanto_descripcion, adelanto_importe)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (numero, presupuesto_id, cliente_id, proyecto,
+             datetime.now().strftime("%Y-%m-%d"),
+             notas_internas, adelanto_descripcion, adelanto_importe)
+        ).lastrowid
+
+    def obtener(self, factura_id):
+        return self.db.fetchone(
+            """SELECT f.*, c.nombre as cliente_nombre, c.nif_cif as cliente_nif,
+                      c.direccion as cliente_direccion
+               FROM facturas f
+               JOIN clientes c ON f.cliente_id = c.id
+               WHERE f.id = ?""",
+            (factura_id,)
+        )
+
+    def listar(self, cliente_id=None):
+        query = """SELECT f.*, c.nombre as cliente_nombre
+                   FROM facturas f
+                   JOIN clientes c ON f.cliente_id = c.id WHERE 1=1"""
+        params = []
+        if cliente_id:
+            query += " AND f.cliente_id = ?"
+            params.append(cliente_id)
+        query += " ORDER BY f.fecha DESC, f.id DESC"
+        return self.db.fetchall(query, params)
+
+    def agregar_linea(self, factura_id, concepto, descripcion="",
+                      unidades=1, precio_unitario=0, es_porte=0, orden=0):
+        return self.db.execute(
+            """INSERT INTO lineas_factura (factura_id, concepto, descripcion,
+               unidades, precio_unitario, es_porte, orden)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (factura_id, concepto, descripcion, unidades, precio_unitario, es_porte, orden)
+        ).lastrowid
+
+    def obtener_lineas(self, factura_id):
+        return self.db.fetchall(
+            "SELECT * FROM lineas_factura WHERE factura_id = ? ORDER BY orden",
+            (factura_id,)
+        )
+
+    def eliminar_linea(self, linea_id):
+        self.db.execute("DELETE FROM lineas_factura WHERE id = ?", (linea_id,))
+
+    def eliminar(self, factura_id):
+        self.db.execute("DELETE FROM lineas_factura WHERE factura_id = ?", (factura_id,))
+        self.db.execute("DELETE FROM facturas WHERE id = ?", (factura_id,))
+
+    def actualizar(self, factura_id, **kwargs):
+        campos = ", ".join(f"{k} = ?" for k in kwargs)
+        valores = list(kwargs.values()) + [factura_id]
+        self.db.execute(f"UPDATE facturas SET {campos} WHERE id = ?", valores)
+
+    def calcular_total(self, factura_id):
+        result = self.db.fetchone(
+            "SELECT COALESCE(SUM(unidades * precio_unitario), 0) as total FROM lineas_factura WHERE factura_id = ?",
+            (factura_id,)
+        )
+        return result["total"] if result else 0
+
+    def crear_desde_presupuesto(self, presupuesto_id):
+        """Create a factura from presupuesto data, extracting porte costs as separate lines."""
+        from app.database.models import PresupuestoModel
+        pres_model = PresupuestoModel(self.db)
+
+        pres = pres_model.obtener(presupuesto_id)
+        if not pres:
+            return None
+
+        factura_id = self.crear(
+            cliente_id=pres["cliente_id"],
+            presupuesto_id=presupuesto_id,
+            proyecto=pres["proyecto"] or "",
+        )
+
+        lineas = pres_model.obtener_lineas(presupuesto_id)
+        orden = 0
+        for linea in lineas:
+            detalles = pres_model.obtener_detalles_coste(linea["id"])
+
+            # Check for porte costs in detalles
+            porte_coste = 0
+            for det in detalles:
+                if det["categoria_nombre"] and det["categoria_nombre"] == "Envío/Porte":
+                    porte_coste += det["precio_total"]
+
+            # Main product line: precio_unitario_final minus porte cost contribution (with margin)
+            precio_producto = linea["precio_unitario_final"]
+            if porte_coste > 0:
+                # The porte cost was included in the total cost, then margin was applied.
+                # We need to subtract the porte's contribution to the final price.
+                margen = linea["margen_porcentaje"]
+                porte_con_margen = porte_coste * (1 + margen / 100)
+                precio_producto = precio_producto - porte_con_margen
+
+            self.agregar_linea(
+                factura_id,
+                concepto=linea["nombre_producto"],
+                descripcion=linea["descripcion"] or "",
+                unidades=linea["cantidad"],
+                precio_unitario=round(precio_producto, 2),
+                es_porte=0,
+                orden=orden,
+            )
+            orden += 1
+
+            # Add porte as separate line (raw cost, no margin)
+            if porte_coste > 0:
+                self.agregar_linea(
+                    factura_id,
+                    concepto=f"Porte - {linea['nombre_producto']}",
+                    descripcion="",
+                    unidades=1,
+                    precio_unitario=round(porte_coste, 2),
+                    es_porte=1,
+                    orden=orden,
+                )
+                orden += 1
+
+        return factura_id
+
+
 class ConfiguracionModel:
     def __init__(self, db):
         self.db = db

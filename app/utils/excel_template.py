@@ -128,22 +128,9 @@ def generar_excel_plantilla(app, presupuesto_id):
     ws["A27"] = f"Pago mediante transferencia bancaria: CC: {empresa_cuenta}"
     ws["A27"].font = Font(bold=True, size=12)
 
-    # Save
-    base_output = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
-    safe_name = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_"
-                        for c in pres["cliente_nombre"]).strip()
-    output_dir = os.path.join(base_output, safe_name)
-    os.makedirs(output_dir, exist_ok=True)
-    filename = f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}.xlsx"
-    filepath = os.path.join(output_dir, filename)
-    # If file locked, use timestamped name
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, "ab") as f:
-                pass
-        except PermissionError:
-            from datetime import datetime as dt
-            ts = dt.now().strftime("%H%M%S")
-            filepath = os.path.join(output_dir, f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}_{ts}.xlsx")
+    # Save using standard output path
+    from app.utils.output_path import get_output_path
+    filepath = get_output_path("PRESUPUESTOS", pres["numero_presupuesto"],
+                               pres["cliente_nombre"], "xlsx")
     wb.save(filepath)
     return filepath

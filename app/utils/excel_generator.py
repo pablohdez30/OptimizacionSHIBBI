@@ -155,22 +155,9 @@ def generar_excel_presupuesto(app, presupuesto_id):
     ws.cell(row=row, column=6, value=beneficio).font = Font(name="Calibri", size=11, bold=True, color="2d6a4f")
     ws.cell(row=row, column=6).number_format = money_format
 
-    # Save in client folder
-    base_output = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                "output")
-    # Create folder: output/ClienteName/
-    safe_name = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_"
-                        for c in pres["cliente_nombre"]).strip()
-    output_dir = os.path.join(base_output, safe_name)
-    os.makedirs(output_dir, exist_ok=True)
-    filename = f"Desglose_{pres['numero_presupuesto']}_{safe_name}.xlsx"
-    filepath = os.path.join(output_dir, filename)
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, "ab") as f:
-                pass
-        except PermissionError:
-            ts = datetime.now().strftime("%H%M%S")
-            filepath = os.path.join(output_dir, f"Desglose_{pres['numero_presupuesto']}_{safe_name}_{ts}.xlsx")
+    # Save using standard output path
+    from app.utils.output_path import get_output_path
+    filepath = get_output_path("DESGLOSES", pres["numero_presupuesto"],
+                               pres["cliente_nombre"], "xlsx")
     wb.save(filepath)
     return filepath

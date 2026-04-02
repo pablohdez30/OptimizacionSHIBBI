@@ -122,6 +122,32 @@ class Database:
                 fecha_modificacion TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS facturas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                numero_factura TEXT NOT NULL UNIQUE,
+                presupuesto_id INTEGER,
+                cliente_id INTEGER NOT NULL,
+                proyecto TEXT DEFAULT '',
+                fecha TEXT NOT NULL,
+                notas_internas TEXT DEFAULT '',
+                adelanto_descripcion TEXT DEFAULT '',
+                adelanto_importe REAL DEFAULT 0,
+                FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id),
+                FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS lineas_factura (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                factura_id INTEGER NOT NULL,
+                concepto TEXT NOT NULL,
+                descripcion TEXT DEFAULT '',
+                unidades REAL DEFAULT 1,
+                precio_unitario REAL DEFAULT 0,
+                es_porte INTEGER DEFAULT 0,
+                orden INTEGER DEFAULT 0,
+                FOREIGN KEY (factura_id) REFERENCES facturas(id) ON DELETE CASCADE
+            );
+
             -- Indexes for search performance
             CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre);
             CREATE INDEX IF NOT EXISTS idx_clientes_activo ON clientes(activo);
@@ -129,6 +155,9 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_proveedores_activo ON proveedores(activo);
             CREATE INDEX IF NOT EXISTS idx_historico_proveedor_id ON historico_precios_proveedor(proveedor_id);
             CREATE INDEX IF NOT EXISTS idx_historico_descripcion ON historico_precios_proveedor(descripcion_material);
+            CREATE INDEX IF NOT EXISTS idx_facturas_cliente ON facturas(cliente_id);
+            CREATE INDEX IF NOT EXISTS idx_facturas_numero ON facturas(numero_factura);
+            CREATE INDEX IF NOT EXISTS idx_lineas_factura_factura ON lineas_factura(factura_id);
         """)
         self.conn.commit()
 
@@ -137,6 +166,38 @@ class Database:
             cursor.execute("SELECT proyecto FROM presupuestos LIMIT 1")
         except sqlite3.OperationalError:
             cursor.execute("ALTER TABLE presupuestos ADD COLUMN proyecto TEXT DEFAULT ''")
+            self.conn.commit()
+
+        # Migration: add facturas tables if missing (for existing DBs)
+        try:
+            cursor.execute("SELECT id FROM facturas LIMIT 1")
+        except sqlite3.OperationalError:
+            cursor.executescript("""
+                CREATE TABLE IF NOT EXISTS facturas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    numero_factura TEXT NOT NULL UNIQUE,
+                    presupuesto_id INTEGER,
+                    cliente_id INTEGER NOT NULL,
+                    proyecto TEXT DEFAULT '',
+                    fecha TEXT NOT NULL,
+                    notas_internas TEXT DEFAULT '',
+                    adelanto_descripcion TEXT DEFAULT '',
+                    adelanto_importe REAL DEFAULT 0,
+                    FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id),
+                    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+                );
+                CREATE TABLE IF NOT EXISTS lineas_factura (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    factura_id INTEGER NOT NULL,
+                    concepto TEXT NOT NULL,
+                    descripcion TEXT DEFAULT '',
+                    unidades REAL DEFAULT 1,
+                    precio_unitario REAL DEFAULT 0,
+                    es_porte INTEGER DEFAULT 0,
+                    orden INTEGER DEFAULT 0,
+                    FOREIGN KEY (factura_id) REFERENCES facturas(id) ON DELETE CASCADE
+                );
+            """)
             self.conn.commit()
 
     def _seed_defaults(self):

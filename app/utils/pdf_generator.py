@@ -22,23 +22,9 @@ def generar_pdf_presupuesto(app, presupuesto_id):
     iva_pct = app.config_model.obtener_float("iva_porcentaje", 21)
 
     # Output path
-    base_output = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
-    safe_name = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_"
-                        for c in pres["cliente_nombre"]).strip()
-    output_dir = os.path.join(base_output, safe_name)
-    os.makedirs(output_dir, exist_ok=True)
-    filename = f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}.pdf"
-    filepath = os.path.join(output_dir, filename)
-
-    # If file is locked (open in another app), use timestamped name
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, "ab") as f:
-                pass  # Test if writable
-        except PermissionError:
-            ts = datetime.now().strftime("%H%M%S")
-            filename = f"Presupuesto_{pres['numero_presupuesto']}_{safe_name}_{ts}.pdf"
-            filepath = os.path.join(output_dir, filename)
+    from app.utils.output_path import get_output_path
+    filepath = get_output_path("PRESUPUESTOS", pres["numero_presupuesto"],
+                               pres["cliente_nombre"], "pdf")
 
     # Colors
     black = HexColor("#000000")
