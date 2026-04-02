@@ -228,6 +228,13 @@ class ScrollableComboBox(ctk.CTkFrame):
         if y + h > screen_h - 50:
             h = screen_h - y - 50
 
+        # Ensure minimum height (at least 3 items)
+        min_h = (3 * item_h) + 28
+        if h < min_h:
+            # Open upwards if not enough space below
+            h = min(n_items * item_h + 28, 400)
+            y = self._entry.winfo_rooty() - h - 2
+
         self._dropdown_win.geometry(f"{w}x{h}+{x}+{y}")
 
     def _on_hover(self, event=None):
