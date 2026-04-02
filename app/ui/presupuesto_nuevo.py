@@ -503,11 +503,11 @@ class DetailRow(ctk.CTkFrame):
         self.prov_menu.pack(side="left", padx=3)
 
         # Material (ScrollableComboBox - searchable dropdown)
-        self.desc_combo = ScrollableComboBox(self, values=[], width=180, height=34,
+        self.desc_combo = ScrollableComboBox(self, values=[], width=250, height=34,
                                               command=self._on_material_select,
                                               placeholder_text="Material...",
-                                              dropdown_font_size=18, dropdown_max_items=12,
-                                              min_dropdown_width=400)
+                                              dropdown_font_size=20, dropdown_max_items=12,
+                                              min_dropdown_width=450)
         self.desc_combo.pack(side="left", padx=3)
 
         # Cant + Precio (CTkEntry)

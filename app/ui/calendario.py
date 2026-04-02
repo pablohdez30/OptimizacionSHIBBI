@@ -226,6 +226,17 @@ class CalendarioView(ctk.CTkFrame):
                                  font=ctk.CTkFont(size=11),
                                  text_color=self.app.COLOR_TEXT_LIGHT).pack(anchor="w")
 
+                # Toggle completed (red) button
+                is_red = (ev["color"] == "#dc3545")
+                toggle_text = "Reabrir" if is_red else "Completado"
+                toggle_color = "#6c757d" if is_red else "#dc3545"
+                ctk.CTkButton(ev_frame, text=toggle_text, width=80, height=24,
+                              font=ctk.CTkFont(size=10),
+                              fg_color=toggle_color,
+                              command=lambda eid=ev["id"], red=is_red, d=dialog, f=fecha:
+                                  self._toggle_completado(eid, red, d, f)
+                              ).pack(side="right", padx=(0, 4), pady=8)
+
                 ctk.CTkButton(ev_frame, text="x", width=24, height=24,
                               fg_color="#dc3545", hover_color="#c1121f",
                               font=ctk.CTkFont(size=10),
@@ -258,6 +269,14 @@ class CalendarioView(ctk.CTkFrame):
     def _on_event_click(self, evento_id):
         """Show event detail (could expand later)."""
         pass  # For now, day click handles everything
+
+    def _toggle_completado(self, evento_id, is_currently_red, dialog, fecha):
+        """Toggle event between completed (red) and active (green)."""
+        new_color = "#2d6a4f" if is_currently_red else "#dc3545"
+        self.app.calendario_model.actualizar_evento(evento_id, color=new_color)
+        dialog.destroy()
+        self._render_month()
+        self._on_day_click(fecha)
 
     def _delete_event(self, evento_id, dialog, fecha):
         self.app.calendario_model.eliminar_evento(evento_id)
