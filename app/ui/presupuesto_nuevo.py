@@ -450,12 +450,13 @@ class MuebleFrame(ctk.CTkFrame):
 
 
 class DetailRow(ctk.CTkFrame):
-    """Cost detail row. CTkOptionMenu for selectors, CTkComboBox for material, CTkEntry for numbers."""
+    """Cost detail row. CTkOptionMenu for cat/prov, ScrollableComboBox for material."""
 
     _cached_cat_names = None
     _cached_prov_names = None
     _cached_prov_ids = None
     _cached_precio_hora = None
+    _cached_margen_cristal = None
 
     def __init__(self, parent, app, mueble, data=None):
         super().__init__(parent, fg_color="transparent", height=38)
@@ -468,8 +469,9 @@ class DetailRow(ctk.CTkFrame):
             DetailRow._cached_prov_names = ["(manual)"] + [p["nombre"] for p in provs]
             DetailRow._cached_prov_ids = {p["nombre"]: p["id"] for p in provs}
             DetailRow._cached_precio_hora = app.config_model.obtener_float("precio_hora_mano_obra", 25)
+            DetailRow._cached_margen_cristal = app.config_model.obtener_float("margen_cristal", 35)
 
-        # Category (CTkOptionMenu - no text input = fast)
+        # Category (CTkOptionMenu)
         self.cat_var = ctk.StringVar(value=DetailRow._cached_cat_names[0] if DetailRow._cached_cat_names else "")
         self.cat_menu = ctk.CTkOptionMenu(self, values=DetailRow._cached_cat_names,
                                            variable=self.cat_var, width=130, height=28,
@@ -489,11 +491,11 @@ class DetailRow(ctk.CTkFrame):
                                             command=self._on_proveedor_change)
         self.prov_menu.pack(side="left", padx=3)
 
-        # Material (CTkComboBox - needs text + dropdown)
-        self.desc_combo = ctk.CTkComboBox(self, values=[], width=170, height=28,
-                                           font=ctk.CTkFont(size=12),
-                                           command=self._on_material_select)
-        self.desc_combo.pack(side="left", padx=3); self.desc_combo.set("")
+        # Material (ScrollableComboBox - searchable dropdown)
+        self.desc_combo = ScrollableComboBox(self, values=[], width=170, height=28,
+                                              command=self._on_material_select,
+                                              placeholder_text="Material...")
+        self.desc_combo.pack(side="left", padx=3)
 
         # Cant + Precio (CTkEntry)
         self.cant_entry = ctk.CTkEntry(self, width=70, height=28, font=ctk.CTkFont(size=12))
@@ -508,11 +510,9 @@ class DetailRow(ctk.CTkFrame):
                       font=ctk.CTkFont(size=11),
                       command=lambda: mueble._remove_detail_row(self)).pack(side="left", padx=3)
 
-        # Recalculate ONLY when leaving the field (not on every keystroke)
-        # This eliminates lag: no canvas redraws while typing
+        # Recalculate on FocusOut and Enter
         self.cant_entry.bind("<FocusOut>", lambda e: self._recalc())
         self.precio_entry.bind("<FocusOut>", lambda e: self._recalc())
-        # Also recalc on Enter key for convenience
         self.cant_entry.bind("<Return>", lambda e: self._recalc())
         self.precio_entry.bind("<Return>", lambda e: self._recalc())
 
@@ -527,17 +527,30 @@ class DetailRow(ctk.CTkFrame):
             if data.get("precio_unitario"):
                 self.precio_entry.delete(0, "end"); self.precio_entry.insert(0, str(data["precio_unitario"]))
         else:
-            if self.cat_var.get() == "Mano de Obra":
+            # Auto-fill for special categories
+            cat = self.cat_var.get()
+            if cat == "Mano de Obra":
                 self.precio_entry.delete(0, "end")
                 self.precio_entry.insert(0, str(DetailRow._cached_precio_hora))
                 self.desc_combo.set("Mano de obra")
+            elif cat == "Cristal":
+                # Set cristal margin on the parent mueble
+                self.mueble.margen_entry.delete(0, "end")
+                self.mueble.margen_entry.insert(0, str(DetailRow._cached_margen_cristal))
         self._update_total()
 
     def _on_category_change(self, cat):
+        """Auto-fill price for Mano de Obra, adjust margin for Cristal."""
         if cat == "Mano de Obra":
             self.precio_entry.delete(0, "end")
             self.precio_entry.insert(0, str(DetailRow._cached_precio_hora))
-            self.desc_combo.set("Mano de obra"); self._recalc()
+            self.desc_combo.set("Mano de obra")
+            self._recalc()
+        elif cat == "Cristal":
+            # Auto-set cristal margin on the mueble
+            self.mueble.margen_entry.delete(0, "end")
+            self.mueble.margen_entry.insert(0, str(DetailRow._cached_margen_cristal))
+            self._recalc()
 
     def _on_proveedor_change(self, prov):
         if prov == "(manual)":
@@ -551,7 +564,9 @@ class DetailRow(ctk.CTkFrame):
         self._prov_materials[prov] = {m["descripcion_material"]: m for m in mats}
         names = [m["descripcion_material"] for m in mats]
         self.desc_combo.configure(values=names)
-        if names: self.desc_combo.set(names[0]); self._on_material_select(names[0])
+        if names:
+            self.desc_combo.set(names[0])
+            self._on_material_select(names[0])
 
     def _on_material_select(self, name):
         prov = self.prov_var.get()
