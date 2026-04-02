@@ -229,7 +229,7 @@ class PresupuestoModel:
             pres = self.obtener(presupuesto_id)
             if pres:
                 cal = CalendarioModel(self.db)
-                titulo = f"{pres['cliente_nombre']} - {pres['proyecto'] or pres['numero_presupuesto']}"
+                titulo = f"{pres['numero_presupuesto']} - {pres['cliente_nombre']}"
                 cal.crear_evento(
                     fecha=datetime.now().strftime("%Y-%m-%d"),
                     titulo=titulo,
