@@ -14,11 +14,15 @@ class ScrollableComboBox(ctk.CTkFrame):
     """Searchable ComboBox with scrollable dropdown for long lists."""
 
     def __init__(self, parent, values=None, width=250, height=32, command=None,
-                 font=None, placeholder_text="Escribe para buscar...", **kwargs):
+                 font=None, placeholder_text="Escribe para buscar...",
+                 dropdown_font_size=20, dropdown_max_items=25, min_dropdown_width=500, **kwargs):
         super().__init__(parent, fg_color="transparent", **kwargs)
         self._values = values or []
         self._filtered = list(self._values)
         self._command = command
+        self._dropdown_font_size = dropdown_font_size
+        self._dropdown_max_items = dropdown_max_items
+        self._min_dropdown_width = min_dropdown_width
         self._dropdown_open = False
         self._dropdown_win = None
         self._listbox = None
@@ -152,7 +156,7 @@ class ScrollableComboBox(ctk.CTkFrame):
 
         self._listbox = tk.Listbox(
             list_frame,
-            font=("Segoe UI", 20),
+            font=("Segoe UI", self._dropdown_font_size),
             bg="#ffffff",
             fg="#1a1a2e",
             selectbackground="#e94560",
@@ -212,11 +216,11 @@ class ScrollableComboBox(ctk.CTkFrame):
         self.update_idletasks()
         x = self._entry.winfo_rootx()
         y = self._entry.winfo_rooty() + self._entry.winfo_height() + 2
-        w = max(self._entry.winfo_width() + 34, 500)
+        w = max(self._entry.winfo_width() + 34, self._min_dropdown_width)
 
-        # Height: fill most of available screen space below the entry
-        item_h = 46
-        n_items = min(max(len(self._filtered), 1), 25)
+        # Height based on font size
+        item_h = self._dropdown_font_size * 2 + 6
+        n_items = min(max(len(self._filtered), 1), self._dropdown_max_items)
         h = (n_items * item_h) + 28
 
         # Don't go below screen

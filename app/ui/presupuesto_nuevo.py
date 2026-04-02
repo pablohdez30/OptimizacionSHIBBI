@@ -443,7 +443,18 @@ class MuebleFrame(ctk.CTkFrame):
     def get_cantidad(self):
         try: return int(self.cant_entry.get())
         except ValueError: return 1
-    def get_precio_cliente(self): return self.get_coste_total() * (1 + self.get_margen() / 100)
+    def get_precio_cliente(self):
+        """Calculate client price: normal margin for most lines, cristal margin for Cristal."""
+        margen_normal = self.get_margen()
+        margen_cristal = DetailRow._cached_margen_cristal or 35
+        total = 0
+        for row in self.detail_rows:
+            coste = row.get_total()
+            if row.cat_var.get() == "Cristal":
+                total += coste * (1 + margen_cristal / 100)
+            else:
+                total += coste * (1 + margen_normal / 100)
+        return total
     def get_detalles(self):
         return [d for r in self.detail_rows for d in [r.get_data()]
                 if d["precio_unitario"] > 0 or d["descripcion"]]
@@ -491,10 +502,12 @@ class DetailRow(ctk.CTkFrame):
                                             command=self._on_proveedor_change)
         self.prov_menu.pack(side="left", padx=3)
 
-        # Material (ScrollableComboBox - searchable dropdown)
+        # Material (ScrollableComboBox - searchable dropdown, compact for detail rows)
         self.desc_combo = ScrollableComboBox(self, values=[], width=170, height=28,
                                               command=self._on_material_select,
-                                              placeholder_text="Material...")
+                                              placeholder_text="Material...",
+                                              dropdown_font_size=13, dropdown_max_items=15,
+                                              min_dropdown_width=350)
         self.desc_combo.pack(side="left", padx=3)
 
         # Cant + Precio (CTkEntry)
@@ -528,29 +541,21 @@ class DetailRow(ctk.CTkFrame):
                 self.precio_entry.delete(0, "end"); self.precio_entry.insert(0, str(data["precio_unitario"]))
         else:
             # Auto-fill for special categories
-            cat = self.cat_var.get()
-            if cat == "Mano de Obra":
+            if self.cat_var.get() == "Mano de Obra":
                 self.precio_entry.delete(0, "end")
                 self.precio_entry.insert(0, str(DetailRow._cached_precio_hora))
                 self.desc_combo.set("Mano de obra")
-            elif cat == "Cristal":
-                # Set cristal margin on the parent mueble
-                self.mueble.margen_entry.delete(0, "end")
-                self.mueble.margen_entry.insert(0, str(DetailRow._cached_margen_cristal))
         self._update_total()
 
     def _on_category_change(self, cat):
-        """Auto-fill price for Mano de Obra, adjust margin for Cristal."""
+        """Auto-fill price for Mano de Obra."""
         if cat == "Mano de Obra":
             self.precio_entry.delete(0, "end")
             self.precio_entry.insert(0, str(DetailRow._cached_precio_hora))
             self.desc_combo.set("Mano de obra")
             self._recalc()
         elif cat == "Cristal":
-            # Auto-set cristal margin on the mueble
-            self.mueble.margen_entry.delete(0, "end")
-            self.mueble.margen_entry.insert(0, str(DetailRow._cached_margen_cristal))
-            self._recalc()
+            self._recalc()  # Triggers recalc with cristal margin logic
 
     def _on_proveedor_change(self, prov):
         if prov == "(manual)":
