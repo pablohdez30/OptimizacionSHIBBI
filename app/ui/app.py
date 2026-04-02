@@ -2,7 +2,8 @@ import customtkinter as ctk
 from app.database import Database
 from app.database.models import (
     ClienteModel, ProveedorModel, PresupuestoModel,
-    CategoriaModel, ConfiguracionModel, HistoricoPreciosModel
+    CategoriaModel, ConfiguracionModel, HistoricoPreciosModel,
+    FacturaModel
 )
 
 
@@ -45,6 +46,7 @@ class ShibbiShopApp(ctk.CTk):
         self.categoria_model = CategoriaModel(self.db)
         self.config_model = ConfiguracionModel(self.db)
         self.historico_model = HistoricoPreciosModel(self.db)
+        self.factura_model = FacturaModel(self.db)
 
         # Current view reference
         self.current_view = None
@@ -83,6 +85,7 @@ class ShibbiShopApp(ctk.CTk):
             ("dashboard", "Dashboard"),
             ("nuevo_presupuesto", "Nuevo Presupuesto"),
             ("presupuestos", "Presupuestos"),
+            ("facturas", "Facturas"),
             ("clientes", "Clientes"),
             ("proveedores", "Proveedores"),
             ("configuracion", "Configuración"),
@@ -142,6 +145,9 @@ class ShibbiShopApp(ctk.CTk):
         elif view_name == "presupuestos":
             from app.ui.presupuestos import PresupuestosView
             self.current_view = PresupuestosView(self.content_frame, self)
+        elif view_name == "facturas":
+            from app.ui.facturas import FacturasView
+            self.current_view = FacturasView(self.content_frame, self)
         elif view_name == "clientes":
             from app.ui.clientes import ClientesView
             self.current_view = ClientesView(self.content_frame, self)
@@ -169,6 +175,23 @@ class ShibbiShopApp(ctk.CTk):
         from app.ui.presupuesto_nuevo import NuevoPresupuestoView
         self.current_view = NuevoPresupuestoView(
             self.content_frame, self, presupuesto_id=presupuesto_id
+        )
+        self.current_view.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+
+    def show_factura_editor(self, factura_id):
+        """Navigate to factura editor for a specific invoice."""
+        for key, btn in self.nav_buttons.items():
+            if key == "facturas":
+                btn.configure(fg_color=self.COLOR_ACCENT, text_color="#ffffff",
+                              hover_color=self.COLOR_ACCENT_HOVER)
+            else:
+                btn.configure(fg_color="transparent", text_color="#c8d6e5",
+                              hover_color=self.COLOR_SECONDARY)
+        if self.current_view:
+            self.current_view.destroy()
+        from app.ui.factura_editor import FacturaEditorView
+        self.current_view = FacturaEditorView(
+            self.content_frame, self, factura_id=factura_id
         )
         self.current_view.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
 
