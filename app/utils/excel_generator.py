@@ -158,6 +158,6 @@ def generar_excel_presupuesto(app, presupuesto_id):
     # Save using standard output path
     from app.utils.output_path import get_output_path
     filepath = get_output_path("DESGLOSES", pres["numero_presupuesto"],
-                               pres["cliente_nombre"], "xlsx")
+                               pres["cliente_nombre"], "xlsx", app=app)
     wb.save(filepath)
     return filepath

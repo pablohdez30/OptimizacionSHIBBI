@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 
 
-def get_output_path(tipo, numero, cliente_nombre, extension):
+def get_output_path(tipo, numero, cliente_nombre, extension, app=None):
     """
     Build the standard output file path for generated documents.
 
@@ -10,14 +10,25 @@ def get_output_path(tipo, numero, cliente_nombre, extension):
     numero: document number, e.g. "26-025"
     cliente_nombre: client name (will be sanitized)
     extension: file extension without dot, e.g. "pdf", "xlsx"
+    app: optional app instance to read configured output path
 
     Returns full filepath like:
-        app/output/CAESPAN 2026/FACTURAS/Factura_26-025_ClientName.pdf
+        {ruta_salida}/CAESPAN 2026/FACTURAS/Factura_26-025_ClientName.pdf
     """
     year = datetime.now().strftime("%Y")
-    base_output = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output"
-    )
+
+    # Try to get configured output path
+    base_output = None
+    if app:
+        try:
+            base_output = app.config_model.obtener("ruta_salida")
+        except Exception:
+            pass
+
+    if not base_output:
+        base_output = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output"
+        )
 
     # Sanitize client name
     safe_name = "".join(

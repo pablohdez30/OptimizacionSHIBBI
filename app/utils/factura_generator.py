@@ -147,7 +147,7 @@ def generar_factura_excel(app, factura_id):
 
     # Save
     filepath = get_output_path("FACTURAS", factura["numero_factura"],
-                               factura["cliente_nombre"], "xlsx")
+                               factura["cliente_nombre"], "xlsx", app=app)
     try:
         wb.save(filepath)
     except PermissionError:
@@ -172,7 +172,7 @@ def generar_factura_pdf(app, factura_id):
 
     # Output path
     filepath = get_output_path("FACTURAS", factura["numero_factura"],
-                               factura["cliente_nombre"], "pdf")
+                               factura["cliente_nombre"], "pdf", app=app)
 
     # Colors
     black = HexColor("#000000")

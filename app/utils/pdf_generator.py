@@ -24,7 +24,7 @@ def generar_pdf_presupuesto(app, presupuesto_id):
     # Output path
     from app.utils.output_path import get_output_path
     filepath = get_output_path("PRESUPUESTOS", pres["numero_presupuesto"],
-                               pres["cliente_nombre"], "pdf")
+                               pres["cliente_nombre"], "pdf", app=app)
 
     # Colors
     black = HexColor("#000000")

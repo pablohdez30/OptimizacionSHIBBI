@@ -162,14 +162,26 @@ class PresupuestoModel:
 
     def _generar_numero(self):
         year = datetime.now().strftime("%y")
+        # Check configured starting number
+        conf = self.db.fetchone(
+            "SELECT valor FROM configuracion WHERE clave = 'ultimo_num_presupuesto'")
+        conf_seq = 0
+        if conf and conf["valor"]:
+            try:
+                conf_seq = int(conf["valor"].split("-")[1])
+            except (IndexError, ValueError):
+                pass
+        # Check last number in DB
         ultimo = self.db.fetchone(
             "SELECT numero_presupuesto FROM presupuestos WHERE numero_presupuesto LIKE ? ORDER BY id DESC LIMIT 1",
-            (f"{year}-%",)
-        )
+            (f"{year}-%",))
+        db_seq = 0
         if ultimo:
-            seq = int(ultimo["numero_presupuesto"].split("-")[1]) + 1
-        else:
-            seq = 1
+            try:
+                db_seq = int(ultimo["numero_presupuesto"].split("-")[1])
+            except (IndexError, ValueError):
+                pass
+        seq = max(conf_seq, db_seq) + 1
         return f"{year}-{seq:03d}"
 
     def crear(self, cliente_id, proyecto="", notas_internas="", condiciones_pago=None,
@@ -373,14 +385,26 @@ class FacturaModel:
 
     def _generar_numero(self):
         year = datetime.now().strftime("%y")
+        # Check configured starting number
+        conf = self.db.fetchone(
+            "SELECT valor FROM configuracion WHERE clave = 'ultimo_num_factura'")
+        conf_seq = 0
+        if conf and conf["valor"]:
+            try:
+                conf_seq = int(conf["valor"].split("-")[1])
+            except (IndexError, ValueError):
+                pass
+        # Check last in DB
         ultimo = self.db.fetchone(
             "SELECT numero_factura FROM facturas WHERE numero_factura LIKE ? ORDER BY id DESC LIMIT 1",
-            (f"{year}-%",)
-        )
+            (f"{year}-%",))
+        db_seq = 0
         if ultimo:
-            seq = int(ultimo["numero_factura"].split("-")[1]) + 1
-        else:
-            seq = 1
+            try:
+                db_seq = int(ultimo["numero_factura"].split("-")[1])
+            except (IndexError, ValueError):
+                pass
+        seq = max(conf_seq, db_seq) + 1
         return f"{year}-{seq:03d}"
 
     def crear(self, cliente_id, presupuesto_id=None, proyecto="",

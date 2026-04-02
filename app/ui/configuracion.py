@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 
 
 class ConfiguracionView(ctk.CTkFrame):
@@ -127,6 +127,62 @@ class ConfiguracionView(ctk.CTkFrame):
                       hover_color=self.app.COLOR_ACCENT_HOVER,
                       command=self._add_categoria).pack(side="left")
 
+        # Ruta de salida
+        ruta_card = self._card(scroll, "Ruta de Salida", 2, 0)
+
+        ctk.CTkLabel(ruta_card, text="Carpeta base donde se guardan\nPresupuestos, Facturas y Desgloses:",
+                     font=ctk.CTkFont(size=12),
+                     text_color=self.app.COLOR_TEXT_LIGHT, justify="left").pack(anchor="w", pady=(0, 5))
+
+        ruta_frame = ctk.CTkFrame(ruta_card, fg_color="transparent")
+        ruta_frame.pack(fill="x", pady=3)
+        self.ruta_entry = ctk.CTkEntry(ruta_frame, width=350, height=30,
+                                        placeholder_text="Dejar vacío = app/output/")
+        self.ruta_entry.pack(side="left", padx=(0, 8))
+        val = self.app.config_model.obtener("ruta_salida") or ""
+        self.ruta_entry.insert(0, val)
+        ctk.CTkButton(ruta_frame, text="Examinar", width=90, height=30,
+                      fg_color="#6c757d", hover_color="#495057",
+                      command=self._browse_ruta).pack(side="left")
+
+        ctk.CTkLabel(ruta_card, text="Estructura: {ruta}/CAESPAN 2026/FACTURAS|PRESUPUESTOS|DESGLOSES/",
+                     font=ctk.CTkFont(size=11),
+                     text_color=self.app.COLOR_TEXT_LIGHT).pack(anchor="w", pady=(3, 0))
+
+        ctk.CTkButton(ruta_card, text="Guardar Ruta", width=150,
+                      fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
+                      command=self._guardar_ruta).pack(anchor="w", pady=(10, 5))
+
+        # Numeración
+        num_card = self._card(scroll, "Numeración", 2, 1)
+
+        ctk.CTkLabel(num_card, text="Si ya tienes facturas/presupuestos creados,\nindica el último número usado:",
+                     font=ctk.CTkFont(size=12),
+                     text_color=self.app.COLOR_TEXT_LIGHT, justify="left").pack(anchor="w", pady=(0, 8))
+
+        self.num_fields = {}
+        for clave, label in [("ultimo_num_presupuesto", "Último Nº Presupuesto (ej: 26-015)"),
+                              ("ultimo_num_factura", "Último Nº Factura (ej: 26-025)")]:
+            frame = ctk.CTkFrame(num_card, fg_color="transparent")
+            frame.pack(fill="x", pady=3)
+            ctk.CTkLabel(frame, text=label, font=ctk.CTkFont(size=13),
+                         text_color=self.app.COLOR_TEXT, width=280,
+                         anchor="w").pack(side="left")
+            entry = ctk.CTkEntry(frame, width=120, height=30,
+                                  placeholder_text="26-XXX")
+            entry.pack(side="left", padx=10)
+            val = self.app.config_model.obtener(clave) or ""
+            entry.insert(0, val)
+            self.num_fields[clave] = entry
+
+        ctk.CTkLabel(num_card, text="La app generará el siguiente número automáticamente.\nDeja vacío para empezar desde 001.",
+                     font=ctk.CTkFont(size=11),
+                     text_color=self.app.COLOR_TEXT_LIGHT, justify="left").pack(anchor="w", pady=(5, 0))
+
+        ctk.CTkButton(num_card, text="Guardar Numeración", width=150,
+                      fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
+                      command=self._guardar_numeracion).pack(anchor="w", pady=(10, 5))
+
     def _card(self, parent, title, row, col):
         card = ctk.CTkFrame(parent, fg_color=self.app.COLOR_CARD, corner_radius=12)
         card.grid(row=row, column=col, sticky="new", padx=8, pady=8)
@@ -151,6 +207,25 @@ class ConfiguracionView(ctk.CTkFrame):
         val = self.condiciones_text.get("1.0", "end").strip()
         self.app.config_model.establecer("condiciones_pago_default", val)
         messagebox.showinfo("Guardado", "Condiciones de pago actualizadas.")
+
+    def _browse_ruta(self):
+        path = filedialog.askdirectory(title="Seleccionar carpeta de salida")
+        if path:
+            self.ruta_entry.delete(0, "end")
+            self.ruta_entry.insert(0, path)
+
+    def _guardar_ruta(self):
+        val = self.ruta_entry.get().strip()
+        self.app.config_model.establecer("ruta_salida", val,
+                                          "Ruta base para guardar documentos")
+        messagebox.showinfo("Guardado", f"Ruta de salida: {val or '(por defecto)'}")
+
+    def _guardar_numeracion(self):
+        for clave, entry in self.num_fields.items():
+            val = entry.get().strip()
+            if val:
+                self.app.config_model.establecer(clave, val)
+        messagebox.showinfo("Guardado", "Numeración actualizada. El siguiente documento usará el número siguiente.")
 
     def _delete_categoria(self, cat_id, cat_name):
         if messagebox.askyesno("Confirmar", f"¿Eliminar la categoría '{cat_name}'?"):
