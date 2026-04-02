@@ -53,77 +53,97 @@ class CalendarioView(ctk.CTkFrame):
                       fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
                       command=self._add_event_dialog).pack(side="right", padx=30, pady=15)
 
-        # Calendar grid
+        # Calendar grid - single frame for headers + days (perfect alignment)
         self.cal_frame = ctk.CTkFrame(self, fg_color=self.app.COLOR_CARD, corner_radius=12)
         self.cal_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=(10, 15))
-
-        # Day name headers
-        self.header_row = ctk.CTkFrame(self.cal_frame, fg_color="transparent")
-        self.header_row.pack(fill="x", padx=5, pady=(10, 2))
         for i in range(7):
-            self.header_row.grid_columnconfigure(i, weight=1)
+            self.cal_frame.grid_columnconfigure(i, weight=1, uniform="day")
+        # Row 0 = headers, rows 1-6 = weeks
+        self.cal_frame.grid_rowconfigure(0, weight=0)
+        for i in range(1, 7):
+            self.cal_frame.grid_rowconfigure(i, weight=1)
+
+        # Day name headers (row 0 of the grid)
         for i, day_name in enumerate(self.DIAS):
             color = self.app.COLOR_TEXT_LIGHT if i < 5 else self.app.COLOR_ACCENT
-            ctk.CTkLabel(self.header_row, text=day_name,
-                         font=ctk.CTkFont(size=13, weight="bold"),
-                         text_color=color).grid(row=0, column=i, sticky="ew", padx=2)
-
-        # Days grid
-        self.days_frame = ctk.CTkFrame(self.cal_frame, fg_color="transparent")
-        self.days_frame.pack(fill="both", expand=True, padx=5, pady=(0, 10))
-        for i in range(7):
-            self.days_frame.grid_columnconfigure(i, weight=1)
-        for i in range(6):
-            self.days_frame.grid_rowconfigure(i, weight=1)
+            lbl = ctk.CTkLabel(self.cal_frame, text=day_name,
+                               font=ctk.CTkFont(size=14, weight="bold"),
+                               text_color=color, height=30)
+            lbl.grid(row=0, column=i, sticky="ew", padx=3, pady=(10, 5))
 
     def _render_month(self):
         self.month_label.configure(text=f"{self.MESES[self._month]} {self._year}")
 
-        # Clear old days
-        for w in self.days_frame.winfo_children():
-            w.destroy()
+        # Clear old day cells (keep header labels in row 0)
+        for w in list(self.cal_frame.winfo_children()):
+            info = w.grid_info()
+            if info and int(info.get("row", 0)) >= 1:
+                w.destroy()
         self._day_frames = {}
 
         # Get events for this month
         eventos = self.app.calendario_model.obtener_eventos_mes(self._year, self._month)
         eventos_by_day = {}
         for ev in eventos:
-            day = ev["fecha"]  # "2026-04-15"
+            day = ev["fecha"]
             if day not in eventos_by_day:
                 eventos_by_day[day] = []
             eventos_by_day[day].append(ev)
 
         # Calendar math
-        cal = calendar.Calendar(firstweekday=0)  # Monday first
+        cal = calendar.Calendar(firstweekday=0)
         month_days = cal.monthdayscalendar(self._year, self._month)
         today = datetime.now().strftime("%Y-%m-%d")
 
         for row_idx, week in enumerate(month_days):
+            grid_row = row_idx + 1  # +1 because row 0 is headers
             for col_idx, day in enumerate(week):
                 if day == 0:
-                    # Empty cell
-                    empty = ctk.CTkFrame(self.days_frame, fg_color="#fafafa", corner_radius=6)
-                    empty.grid(row=row_idx, column=col_idx, sticky="nsew", padx=2, pady=2)
+                    empty = ctk.CTkFrame(self.cal_frame, fg_color="#fafafa", corner_radius=6)
+                    empty.grid(row=grid_row, column=col_idx, sticky="nsew", padx=3, pady=3)
                     continue
 
                 fecha_str = f"{self._year}-{self._month:02d}-{day:02d}"
                 is_today = fecha_str == today
                 is_weekend = col_idx >= 5
 
-                bg = "#e8f4f8" if is_today else ("#f8f8f8" if is_weekend else "#ffffff")
-                cell = ctk.CTkFrame(self.days_frame, fg_color=bg, corner_radius=6,
+                # Background: today=blue tint, weekend=warm gray, normal=white
+                if is_today:
+                    bg = "#dbeef8"
+                    border_color = "#0077b6"
+                elif is_weekend:
+                    bg = "#f5f3f0"
+                else:
+                    bg = "#ffffff"
+
+                cell = ctk.CTkFrame(self.cal_frame, fg_color=bg, corner_radius=6,
+                                     border_width=2 if is_today else 1,
+                                     border_color=border_color if is_today else "#e8e8e8",
                                      cursor="hand2")
-                cell.grid(row=row_idx, column=col_idx, sticky="nsew", padx=2, pady=2)
+                cell.grid(row=grid_row, column=col_idx, sticky="nsew", padx=3, pady=3)
                 cell.bind("<Button-1>", lambda e, f=fecha_str: self._on_day_click(f))
 
-                # Day number
-                day_color = self.app.COLOR_ACCENT if is_today else (
-                    "#aaa" if is_weekend else self.app.COLOR_TEXT)
-                day_font = ctk.CTkFont(size=13, weight="bold") if is_today else ctk.CTkFont(size=12)
-                lbl = ctk.CTkLabel(cell, text=str(day), font=day_font,
-                                    text_color=day_color, anchor="nw")
-                lbl.pack(anchor="nw", padx=6, pady=(4, 0))
-                lbl.bind("<Button-1>", lambda e, f=fecha_str: self._on_day_click(f))
+                # Day number - bigger and bolder for today
+                if is_today:
+                    day_color = "#ffffff"
+                    # Circle behind the number
+                    circle = ctk.CTkFrame(cell, fg_color="#0077b6", corner_radius=15,
+                                           width=30, height=30)
+                    circle.pack(anchor="nw", padx=5, pady=(5, 0))
+                    circle.pack_propagate(False)
+                    lbl = ctk.CTkLabel(circle, text=str(day),
+                                        font=ctk.CTkFont(size=14, weight="bold"),
+                                        text_color=day_color)
+                    lbl.pack(expand=True)
+                    lbl.bind("<Button-1>", lambda e, f=fecha_str: self._on_day_click(f))
+                    circle.bind("<Button-1>", lambda e, f=fecha_str: self._on_day_click(f))
+                else:
+                    day_color = "#aaa" if is_weekend else self.app.COLOR_TEXT
+                    lbl = ctk.CTkLabel(cell, text=str(day),
+                                        font=ctk.CTkFont(size=13, weight="bold"),
+                                        text_color=day_color, anchor="nw")
+                    lbl.pack(anchor="nw", padx=6, pady=(4, 0))
+                    lbl.bind("<Button-1>", lambda e, f=fecha_str: self._on_day_click(f))
 
                 # Events for this day
                 day_events = eventos_by_day.get(fecha_str, [])
