@@ -212,7 +212,7 @@ class ScrollableComboBox(ctk.CTkFrame):
         if not self._dropdown_win:
             return
 
-        # Position below the entry
+        # Position below the entry - ALWAYS open downward
         self.update_idletasks()
         x = self._entry.winfo_rootx()
         y = self._entry.winfo_rooty() + self._entry.winfo_height() + 2
@@ -223,17 +223,13 @@ class ScrollableComboBox(ctk.CTkFrame):
         n_items = min(max(len(self._filtered), 1), self._dropdown_max_items)
         h = (n_items * item_h) + 28
 
-        # Don't go below screen
+        # Limit height to available screen space below, but always open down
         screen_h = self.winfo_screenheight()
-        if y + h > screen_h - 50:
-            h = screen_h - y - 50
-
-        # Ensure minimum height (at least 3 items)
-        min_h = (3 * item_h) + 28
-        if h < min_h:
-            # Open upwards if not enough space below
-            h = min(n_items * item_h + 28, 400)
-            y = self._entry.winfo_rooty() - h - 2
+        max_h = screen_h - y - 50
+        if max_h < 100:
+            max_h = 400  # Fallback minimum
+        h = min(h, max_h)
+        h = max(h, 100)  # Never smaller than 100px
 
         self._dropdown_win.geometry(f"{w}x{h}+{x}+{y}")
 

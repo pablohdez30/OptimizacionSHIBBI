@@ -506,7 +506,7 @@ class DetailRow(ctk.CTkFrame):
         self.desc_combo = ScrollableComboBox(self, values=[], width=180, height=34,
                                               command=self._on_material_select,
                                               placeholder_text="Material...",
-                                              dropdown_font_size=16, dropdown_max_items=15,
+                                              dropdown_font_size=18, dropdown_max_items=12,
                                               min_dropdown_width=400)
         self.desc_combo.pack(side="left", padx=3)
 
