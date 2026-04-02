@@ -425,7 +425,7 @@ class MuebleFrame(ctk.CTkFrame):
 
     def _add_detail_row(self, data=None):
         row = DetailRow(self.rows_container, self.app, self, data)
-        row.pack(fill="x", pady=1); self.detail_rows.append(row)
+        row.pack(fill="x", pady=3); self.detail_rows.append(row)
 
     def _remove_detail_row(self, row):
         if row in self.detail_rows:
@@ -470,7 +470,7 @@ class DetailRow(ctk.CTkFrame):
     _cached_margen_cristal = None
 
     def __init__(self, parent, app, mueble, data=None):
-        super().__init__(parent, fg_color="transparent", height=38)
+        super().__init__(parent, fg_color="transparent", height=44)
         self.app = app; self.mueble = mueble
         self._prov_materials = {}
 
@@ -485,8 +485,8 @@ class DetailRow(ctk.CTkFrame):
         # Category (CTkOptionMenu)
         self.cat_var = ctk.StringVar(value=DetailRow._cached_cat_names[0] if DetailRow._cached_cat_names else "")
         self.cat_menu = ctk.CTkOptionMenu(self, values=DetailRow._cached_cat_names,
-                                           variable=self.cat_var, width=130, height=28,
-                                           font=ctk.CTkFont(size=12),
+                                           variable=self.cat_var, width=135, height=34,
+                                           font=ctk.CTkFont(size=13),
                                            fg_color="#e8e8e8", text_color="#1a1a2e",
                                            button_color="#d0d0d0", button_hover_color="#b0b0b0",
                                            command=self._on_category_change)
@@ -495,25 +495,25 @@ class DetailRow(ctk.CTkFrame):
         # Provider (CTkOptionMenu)
         self.prov_var = ctk.StringVar(value="(manual)")
         self.prov_menu = ctk.CTkOptionMenu(self, values=DetailRow._cached_prov_names,
-                                            variable=self.prov_var, width=130, height=28,
-                                            font=ctk.CTkFont(size=12),
+                                            variable=self.prov_var, width=135, height=34,
+                                            font=ctk.CTkFont(size=13),
                                             fg_color="#e8e8e8", text_color="#1a1a2e",
                                             button_color="#d0d0d0", button_hover_color="#b0b0b0",
                                             command=self._on_proveedor_change)
         self.prov_menu.pack(side="left", padx=3)
 
-        # Material (ScrollableComboBox - searchable dropdown, compact for detail rows)
-        self.desc_combo = ScrollableComboBox(self, values=[], width=170, height=28,
+        # Material (ScrollableComboBox - searchable dropdown)
+        self.desc_combo = ScrollableComboBox(self, values=[], width=180, height=34,
                                               command=self._on_material_select,
                                               placeholder_text="Material...",
-                                              dropdown_font_size=13, dropdown_max_items=15,
-                                              min_dropdown_width=350)
+                                              dropdown_font_size=16, dropdown_max_items=15,
+                                              min_dropdown_width=400)
         self.desc_combo.pack(side="left", padx=3)
 
         # Cant + Precio (CTkEntry)
-        self.cant_entry = ctk.CTkEntry(self, width=70, height=28, font=ctk.CTkFont(size=12))
+        self.cant_entry = ctk.CTkEntry(self, width=75, height=34, font=ctk.CTkFont(size=13))
         self.cant_entry.pack(side="left", padx=3); self.cant_entry.insert(0, "1")
-        self.precio_entry = ctk.CTkEntry(self, width=90, height=28, font=ctk.CTkFont(size=12))
+        self.precio_entry = ctk.CTkEntry(self, width=95, height=34, font=ctk.CTkFont(size=13))
         self.precio_entry.pack(side="left", padx=3); self.precio_entry.insert(0, "0")
 
         self.total_label = ctk.CTkLabel(self, text="0.00€", width=90, font=ctk.CTkFont(size=12),
