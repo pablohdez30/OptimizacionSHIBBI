@@ -145,11 +145,26 @@ class PresupuestosView(ctk.CTkFrame):
                                   command=lambda pid=p["id"], st=s: self._cambiar_estado(pid, st)
                                   ).pack(side="left", padx=2)
 
+            # "Crear Factura" button for accepted presupuestos
+            if p["estado"] == "Aceptado":
+                ctk.CTkButton(actions, text="Factura", width=65, height=26,
+                              font=ctk.CTkFont(size=11),
+                              fg_color="#0077b6", hover_color="#005f8a",
+                              command=lambda pid=p["id"]: self._crear_factura(pid)
+                              ).pack(side="left", padx=2)
+
             ctk.CTkButton(actions, text="Eliminar", width=60, height=26,
                           font=ctk.CTkFont(size=11),
                           fg_color=self.app.COLOR_DANGER, hover_color="#c1121f",
                           command=lambda pid=p["id"]: self._eliminar(pid)
                           ).pack(side="left", padx=2)
+
+    def _crear_factura(self, presupuesto_id):
+        """Create invoice from accepted presupuesto and open editor."""
+        fid = self.app.factura_model.crear_desde_presupuesto(presupuesto_id)
+        if fid:
+            messagebox.showinfo("Factura creada", "Factura generada desde el presupuesto.")
+            self.app.show_factura_editor(fid)
 
     def _cambiar_estado(self, presupuesto_id, nuevo_estado):
         self.app.presupuesto_model.actualizar_estado(presupuesto_id, nuevo_estado)

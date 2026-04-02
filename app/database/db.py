@@ -148,7 +148,18 @@ class Database:
                 FOREIGN KEY (factura_id) REFERENCES facturas(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS eventos_calendario (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fecha TEXT NOT NULL,
+                titulo TEXT NOT NULL,
+                descripcion TEXT DEFAULT '',
+                color TEXT DEFAULT '#0077b6',
+                presupuesto_id INTEGER,
+                FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id)
+            );
+
             -- Indexes for search performance
+            CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos_calendario(fecha);
             CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre);
             CREATE INDEX IF NOT EXISTS idx_clientes_activo ON clientes(activo);
             CREATE INDEX IF NOT EXISTS idx_proveedores_nombre ON proveedores(nombre);
@@ -197,6 +208,23 @@ class Database:
                     orden INTEGER DEFAULT 0,
                     FOREIGN KEY (factura_id) REFERENCES facturas(id) ON DELETE CASCADE
                 );
+            """)
+            self.conn.commit()
+
+        # Migration: add eventos_calendario table
+        try:
+            cursor.execute("SELECT id FROM eventos_calendario LIMIT 1")
+        except sqlite3.OperationalError:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS eventos_calendario (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    fecha TEXT NOT NULL,
+                    titulo TEXT NOT NULL,
+                    descripcion TEXT DEFAULT '',
+                    color TEXT DEFAULT '#0077b6',
+                    presupuesto_id INTEGER,
+                    FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id)
+                )
             """)
             self.conn.commit()
 

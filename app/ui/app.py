@@ -3,7 +3,7 @@ from app.database import Database
 from app.database.models import (
     ClienteModel, ProveedorModel, PresupuestoModel,
     CategoriaModel, ConfiguracionModel, HistoricoPreciosModel,
-    FacturaModel
+    FacturaModel, CalendarioModel
 )
 
 
@@ -47,6 +47,7 @@ class ShibbiShopApp(ctk.CTk):
         self.config_model = ConfiguracionModel(self.db)
         self.historico_model = HistoricoPreciosModel(self.db)
         self.factura_model = FacturaModel(self.db)
+        self.calendario_model = CalendarioModel(self.db)
 
         # Current view reference
         self.current_view = None
@@ -86,6 +87,7 @@ class ShibbiShopApp(ctk.CTk):
             ("nuevo_presupuesto", "Nuevo Presupuesto"),
             ("presupuestos", "Presupuestos"),
             ("facturas", "Facturas"),
+            ("calendario", "Calendario"),
             ("clientes", "Clientes"),
             ("proveedores", "Proveedores"),
             ("configuracion", "Configuración"),
@@ -148,6 +150,9 @@ class ShibbiShopApp(ctk.CTk):
         elif view_name == "facturas":
             from app.ui.facturas import FacturasView
             self.current_view = FacturasView(self.content_frame, self)
+        elif view_name == "calendario":
+            from app.ui.calendario import CalendarioView
+            self.current_view = CalendarioView(self.content_frame, self)
         elif view_name == "clientes":
             from app.ui.clientes import ClientesView
             self.current_view = ClientesView(self.content_frame, self)

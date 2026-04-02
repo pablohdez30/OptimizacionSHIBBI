@@ -225,6 +225,18 @@ class PresupuestoModel:
             campos["fecha_envio"] = datetime.now().strftime("%Y-%m-%d")
         elif estado == "Aceptado":
             campos["fecha_aceptacion"] = datetime.now().strftime("%Y-%m-%d")
+            # Auto-create calendar event
+            pres = self.obtener(presupuesto_id)
+            if pres:
+                cal = CalendarioModel(self.db)
+                titulo = f"{pres['cliente_nombre']} - {pres['proyecto'] or pres['numero_presupuesto']}"
+                cal.crear_evento(
+                    fecha=datetime.now().strftime("%Y-%m-%d"),
+                    titulo=titulo,
+                    descripcion=f"Presupuesto {pres['numero_presupuesto']} aceptado. Pendiente de producción.",
+                    color="#2d6a4f",
+                    presupuesto_id=presupuesto_id
+                )
         elif estado == "Entregado":
             campos["fecha_entrega_real"] = datetime.now().strftime("%Y-%m-%d")
         sets = ", ".join(f"{k} = ?" for k in campos)
@@ -541,3 +553,36 @@ class ConfiguracionModel:
 
     def listar_todo(self):
         return self.db.fetchall("SELECT * FROM configuracion ORDER BY clave")
+
+
+class CalendarioModel:
+    def __init__(self, db):
+        self.db = db
+
+    def crear_evento(self, fecha, titulo, descripcion="", color="#0077b6", presupuesto_id=None):
+        return self.db.execute(
+            """INSERT INTO eventos_calendario (fecha, titulo, descripcion, color, presupuesto_id)
+               VALUES (?, ?, ?, ?, ?)""",
+            (fecha, titulo, descripcion, color, presupuesto_id)
+        ).lastrowid
+
+    def obtener_eventos_mes(self, year, month):
+        prefix = f"{year}-{month:02d}"
+        return self.db.fetchall(
+            "SELECT * FROM eventos_calendario WHERE fecha LIKE ? ORDER BY fecha",
+            (f"{prefix}%",)
+        )
+
+    def obtener_eventos_dia(self, fecha):
+        return self.db.fetchall(
+            "SELECT * FROM eventos_calendario WHERE fecha = ? ORDER BY id",
+            (fecha,)
+        )
+
+    def eliminar_evento(self, evento_id):
+        self.db.execute("DELETE FROM eventos_calendario WHERE id = ?", (evento_id,))
+
+    def actualizar_evento(self, evento_id, **kwargs):
+        campos = ", ".join(f"{k} = ?" for k in kwargs)
+        valores = list(kwargs.values()) + [evento_id]
+        self.db.execute(f"UPDATE eventos_calendario SET {campos} WHERE id = ?", valores)

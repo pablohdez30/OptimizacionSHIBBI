@@ -396,12 +396,6 @@ class FacturaLineRow(ctk.CTkFrame):
         if concepto_text:
             self.concepto_entry.insert(0, concepto_text)
 
-        # Porte tag
-        if es_porte:
-            ctk.CTkLabel(self, text="(Porte)", width=50,
-                         font=ctk.CTkFont(size=10, slant="italic"),
-                         text_color="#0077b6").pack(side="left", padx=(0, 3))
-
         # Unidades
         self.unidades_entry = ctk.CTkEntry(self, width=80, height=28,
                                             font=ctk.CTkFont(size=12))

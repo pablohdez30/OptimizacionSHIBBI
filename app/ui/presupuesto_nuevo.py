@@ -119,12 +119,26 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         ctk.CTkCheckBox(row2, text="Incluida", variable=self.instalacion_var,
                         font=ctk.CTkFont(size=12)).pack(side="left", padx=10)
 
-        # Row 3: Notas
+        # Row 3: Condiciones de pago + Notas
         row3 = ctk.CTkFrame(info_inner, fg_color="transparent")
-        row3.pack(fill="x")
-        ctk.CTkLabel(row3, text="Notas internas:", font=ctk.CTkFont(size=13),
+        row3.pack(fill="x", pady=(0, 5))
+        ctk.CTkLabel(row3, text="Condiciones:", font=ctk.CTkFont(size=13),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.notas_entry = ctk.CTkEntry(row3, width=500, height=30,
+        condiciones_opciones = [
+            "50% adelanto - 50% antes de la entrega del trabajo.",
+            "70% adelanto - 30% antes de la entrega del trabajo.",
+            "100% adelanto.",
+        ]
+        self.condiciones_combo = ctk.CTkComboBox(row3, values=condiciones_opciones, width=420, height=30,
+                                                   font=ctk.CTkFont(size=11))
+        self.condiciones_combo.pack(side="left", padx=(10, 0))
+        self.condiciones_combo.set(condiciones_opciones[0])
+
+        row4 = ctk.CTkFrame(info_inner, fg_color="transparent")
+        row4.pack(fill="x")
+        ctk.CTkLabel(row4, text="Notas internas:", font=ctk.CTkFont(size=13),
+                     text_color=self.app.COLOR_TEXT).pack(side="left")
+        self.notas_entry = ctk.CTkEntry(row4, width=500, height=30,
                                          placeholder_text="Notas internas...")
         self.notas_entry.pack(side="left", padx=10)
 
@@ -242,14 +256,16 @@ class NuevoPresupuestoView(ctk.CTkFrame):
             self.app.presupuesto_model.actualizar(
                 self.presupuesto_id, cliente_id=cliente_id, proyecto=proyecto,
                 notas_internas=self.notas_entry.get().strip(),
-                incluye_instalacion=1 if self.instalacion_var.get() else 0)
+                incluye_instalacion=1 if self.instalacion_var.get() else 0,
+                condiciones_pago=self.condiciones_combo.get())
             for ol in self.app.presupuesto_model.obtener_lineas(self.presupuesto_id):
                 self.app.presupuesto_model.eliminar_linea(ol["id"])
             pres_id = self.presupuesto_id
         else:
             pres_id = self.app.presupuesto_model.crear(
                 cliente_id, proyecto=proyecto, notas_internas=self.notas_entry.get().strip(),
-                incluye_instalacion=self.instalacion_var.get())
+                incluye_instalacion=self.instalacion_var.get(),
+                condiciones_pago=self.condiciones_combo.get())
             self.presupuesto_id = pres_id
         prov_map = {p["nombre"]: p["id"] for p in self.app.proveedor_model.listar()}
         for i, mf in enumerate(self.mueble_frames):
@@ -282,6 +298,8 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         except: self.fecha_entry.insert(0, pres["fecha"] or "")
         self.proyecto_entry.delete(0, "end"); self.proyecto_entry.insert(0, pres["proyecto"] or "")
         self.instalacion_var.set(bool(pres["incluye_instalacion"]))
+        if pres["condiciones_pago"]:
+            self.condiciones_combo.set(pres["condiciones_pago"])
         self.notas_entry.delete(0, "end"); self.notas_entry.insert(0, pres["notas_internas"] or "")
         if pres["cliente_nombre"] in self.cliente_names:
             self.cliente_combo.set(pres["cliente_nombre"])
