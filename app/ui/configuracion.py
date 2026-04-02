@@ -105,10 +105,17 @@ class ConfiguracionView(ctk.CTkFrame):
 
         categorias = self.app.categoria_model.listar()
         for cat in categorias:
+            cat_row = ctk.CTkFrame(cat_card, fg_color="transparent")
+            cat_row.pack(fill="x", pady=2)
             prefix = "(personalizada) " if cat["es_personalizada"] else ""
-            ctk.CTkLabel(cat_card, text=f"  {prefix}{cat['nombre']}",
+            ctk.CTkLabel(cat_row, text=f"  {prefix}{cat['nombre']}",
                          font=ctk.CTkFont(size=13),
-                         text_color=self.app.COLOR_TEXT).pack(anchor="w", pady=2)
+                         text_color=self.app.COLOR_TEXT).pack(side="left")
+            ctk.CTkButton(cat_row, text="x", width=22, height=22,
+                          fg_color="#dc3545", hover_color="#c1121f",
+                          font=ctk.CTkFont(size=10),
+                          command=lambda cid=cat["id"], cn=cat["nombre"]: self._delete_categoria(cid, cn)
+                          ).pack(side="right", padx=5)
 
         add_frame = ctk.CTkFrame(cat_card, fg_color="transparent")
         add_frame.pack(fill="x", pady=(10, 5))
@@ -144,6 +151,17 @@ class ConfiguracionView(ctk.CTkFrame):
         val = self.condiciones_text.get("1.0", "end").strip()
         self.app.config_model.establecer("condiciones_pago_default", val)
         messagebox.showinfo("Guardado", "Condiciones de pago actualizadas.")
+
+    def _delete_categoria(self, cat_id, cat_name):
+        if messagebox.askyesno("Confirmar", f"¿Eliminar la categoría '{cat_name}'?"):
+            try:
+                self.app.db.execute("DELETE FROM categorias_material WHERE id = ?", (cat_id,))
+                # Invalidate DetailRow cache
+                from app.ui.presupuesto_nuevo import DetailRow
+                DetailRow._cached_cat_names = None
+                self.app._show_view("configuracion")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se puede eliminar: {e}")
 
     def _add_categoria(self):
         nombre = self.new_cat_entry.get().strip()
