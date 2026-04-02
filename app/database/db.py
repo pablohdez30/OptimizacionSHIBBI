@@ -8,7 +8,12 @@ class Database:
 
     def __init__(self, db_path=None):
         if db_path is None:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            import sys
+            if getattr(sys, 'frozen', False):
+                # Running as .exe - store DB next to the executable
+                base_dir = os.path.dirname(sys.executable)
+            else:
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             db_path = os.path.join(base_dir, "data", "shibbishop.db")
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.db_path = db_path
