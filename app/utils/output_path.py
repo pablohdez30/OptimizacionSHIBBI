@@ -38,7 +38,7 @@ def get_output_path(tipo, numero, cliente_nombre, extension, app=None):
 
     # Singular form for filename
     tipo_singular = {
-        "FACTURAS": "Factura",
+        "FACTURAS": "FACTURA",
         "PRESUPUESTOS": "Presupuesto",
         "DESGLOSES": "Desglose",
     }.get(tipo, tipo)

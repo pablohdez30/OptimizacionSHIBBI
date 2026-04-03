@@ -61,7 +61,10 @@ class ShibbiShopApp(ctk.CTk):
 
         # Current view reference
         self.current_view = None
+        self.current_view_name = None
         self.nav_buttons = {}
+        # Cache for presupuesto view (keeps form data when switching tabs)
+        self._cached_presupuesto_view = None
 
         self._build_ui()
         self._show_view("dashboard")
@@ -143,9 +146,24 @@ class ShibbiShopApp(ctk.CTk):
                               text_color="#c8d6e5",
                               hover_color=self.COLOR_SECONDARY)
 
-        # Clear current view
+        # Hide current view (don't destroy presupuesto - cache it)
         if self.current_view:
-            self.current_view.destroy()
+            if self.current_view_name == "nuevo_presupuesto":
+                # Just hide it, keep in memory
+                self.current_view.grid_forget()
+            else:
+                self.current_view.destroy()
+            self.current_view = None
+
+        # Show cached presupuesto view if switching back to it
+        if view_name == "nuevo_presupuesto" and self._cached_presupuesto_view:
+            try:
+                self.current_view = self._cached_presupuesto_view
+                self.current_view.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+                self.current_view_name = view_name
+                return
+            except Exception:
+                self._cached_presupuesto_view = None
 
         # Import and show new view
         if view_name == "dashboard":
@@ -154,6 +172,7 @@ class ShibbiShopApp(ctk.CTk):
         elif view_name == "nuevo_presupuesto":
             from app.ui.presupuesto_nuevo import NuevoPresupuestoView
             self.current_view = NuevoPresupuestoView(self.content_frame, self)
+            self._cached_presupuesto_view = self.current_view
         elif view_name == "presupuestos":
             from app.ui.presupuestos import PresupuestosView
             self.current_view = PresupuestosView(self.content_frame, self)
@@ -175,8 +194,11 @@ class ShibbiShopApp(ctk.CTk):
 
         if self.current_view:
             self.current_view.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        self.current_view_name = view_name
 
     def show_nuevo_presupuesto(self, presupuesto_id=None):
+        """Navigate to budget editor. Clears cache since we're loading specific data."""
+        self._cached_presupuesto_view = None
         """Navigate to new budget, optionally editing an existing one."""
         for key, btn in self.nav_buttons.items():
             if key == "nuevo_presupuesto":
