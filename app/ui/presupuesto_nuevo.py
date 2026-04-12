@@ -327,9 +327,11 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         from app.utils.pdf_generator import generar_pdf_presupuesto
         from app.utils.excel_template import generar_excel_plantilla
         from app.utils.excel_generator import generar_excel_presupuesto
+        from app.utils.output_path import copiar_a_drive
 
         paths = []
         errors = []
+        drive_warnings = []
 
         for name, func in [("Excel presupuesto", generar_excel_plantilla),
                             ("PDF presupuesto", generar_pdf_presupuesto),
@@ -338,6 +340,10 @@ class NuevoPresupuestoView(ctk.CTkFrame):
                 path = func(self.app, pid)
                 if path:
                     paths.append(path)
+                    # Copy to Google Drive
+                    ok, err = copiar_a_drive(path, app=self.app)
+                    if err and err not in drive_warnings:
+                        drive_warnings.append(err)
             except PermissionError:
                 errors.append(f"{name}: archivo abierto, ciérralo primero")
             except Exception as e:
@@ -346,11 +352,13 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         msg = ""
         if paths:
             msg += "Archivos generados:\n" + "\n".join(f"  {p}" for p in paths)
+        if drive_warnings:
+            msg += "\n\nAvisos Drive:\n" + "\n".join(f"  {w}" for w in drive_warnings)
         if errors:
             msg += "\n\nErrores:\n" + "\n".join(f"  {e}" for e in errors)
 
-        if errors:
-            messagebox.showwarning("Exportación parcial", msg)
+        if errors or drive_warnings:
+            messagebox.showwarning("Exportación" + (" parcial" if errors else ""), msg)
         elif paths:
             messagebox.showinfo("Presupuesto exportado", msg)
 
@@ -378,11 +386,8 @@ class MuebleFrame(ctk.CTkFrame):
                      text_color=self.app.COLOR_TEXT).pack(side="left")
         self.cant_entry = ctk.CTkEntry(header, width=50, height=30)
         self.cant_entry.pack(side="left", padx=(5, 15)); self.cant_entry.insert(0, "1")
-        ctk.CTkLabel(header, text="Margen %:", font=ctk.CTkFont(size=13),
-                     text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.margen_entry = ctk.CTkEntry(header, width=60, height=30)
-        self.margen_entry.pack(side="left", padx=(5, 10))
-        self.margen_entry.insert(0, self.app.config_model.obtener("margen_default") or "100")
+        # Global margin stored for saving to DB but hidden (per-line margins in DetailRow)
+        self._margen_default = self.app.config_model.obtener("margen_default") or "100"
         ctk.CTkButton(header, text="X", width=30, height=30,
                       fg_color=self.app.COLOR_DANGER, hover_color="#c1121f",
                       command=lambda: self.view._remove_mueble(self)).pack(side="right")
@@ -392,7 +397,7 @@ class MuebleFrame(ctk.CTkFrame):
         th = ctk.CTkFrame(table, fg_color="#f0f2f5", corner_radius=4)
         th.pack(fill="x", pady=(0, 3))
         for text, w in [("Categoría", 130), ("Proveedor", 130), ("Material", 170),
-                        ("Cant.", 70), ("Precio Ud.", 90), ("Total", 90)]:
+                        ("Cant.", 70), ("Precio Ud.", 90), ("Total", 90), ("Margen%", 65)]:
             ctk.CTkLabel(th, text=text, width=w, font=ctk.CTkFont(size=11, weight="bold"),
                          text_color=self.app.COLOR_TEXT_LIGHT, anchor="w").pack(side="left", padx=3, pady=5)
         self.rows_container = ctk.CTkFrame(table, fg_color="transparent")
@@ -415,7 +420,6 @@ class MuebleFrame(ctk.CTkFrame):
             self.nombre_entry.insert(0, data.get("nombre", ""))
             self.desc_entry.insert(0, data.get("descripcion", ""))
             self.cant_entry.delete(0, "end"); self.cant_entry.insert(0, str(data.get("cantidad", 1)))
-            self.margen_entry.delete(0, "end"); self.margen_entry.insert(0, str(data.get("margen", 100)))
             for det in data.get("detalles", []):
                 self._add_detail_row(det)
         else:
@@ -438,22 +442,18 @@ class MuebleFrame(ctk.CTkFrame):
 
     def get_coste_total(self): return sum(r.get_total() for r in self.detail_rows)
     def get_margen(self):
-        try: return float(self.margen_entry.get().replace(",", "."))
-        except ValueError: return 100
+        try: return float(self._margen_default.replace(",", "."))
+        except (ValueError, AttributeError): return 100
     def get_cantidad(self):
         try: return int(self.cant_entry.get())
         except ValueError: return 1
     def get_precio_cliente(self):
-        """Calculate client price: normal margin for most lines, cristal margin for Cristal."""
-        margen_normal = self.get_margen()
-        margen_cristal = DetailRow._cached_margen_cristal or 35
+        """Calculate client price using each line's individual margin."""
         total = 0
         for row in self.detail_rows:
             coste = row.get_total()
-            if row.cat_var.get() == "Cristal":
-                total += coste * (1 + margen_cristal / 100)
-            else:
-                total += coste * (1 + margen_normal / 100)
+            margen = row.get_margen()
+            total += coste * (1 + margen / 100)
         return total
     def get_detalles(self):
         return [d for r in self.detail_rows for d in [r.get_data()]
@@ -468,6 +468,14 @@ class DetailRow(ctk.CTkFrame):
     _cached_prov_ids = None
     _cached_precio_hora = None
     _cached_margen_cristal = None
+
+    # Default margins per category
+    _DEFAULT_MARGINS = {
+        "Cristal": "35",
+        "Envío/Porte": "0",
+        "Extras": "0",
+    }
+    _DEFAULT_MARGIN = "100"  # For all other categories
 
     def __init__(self, parent, app, mueble, data=None):
         super().__init__(parent, fg_color="transparent", height=44)
@@ -519,6 +527,14 @@ class DetailRow(ctk.CTkFrame):
         self.total_label = ctk.CTkLabel(self, text="0.00€", width=90, font=ctk.CTkFont(size=12),
                                          text_color=app.COLOR_TEXT, anchor="e")
         self.total_label.pack(side="left", padx=3)
+
+        # Per-line margin entry
+        self.margen_entry = ctk.CTkEntry(self, width=65, height=34, font=ctk.CTkFont(size=13))
+        self.margen_entry.pack(side="left", padx=3)
+        # Set default margin based on initial category
+        default_m = self._DEFAULT_MARGINS.get(self.cat_var.get(), self._DEFAULT_MARGIN)
+        self.margen_entry.insert(0, default_m)
+
         ctk.CTkButton(self, text="x", width=26, height=26, fg_color="#dc3545", hover_color="#c1121f",
                       font=ctk.CTkFont(size=11),
                       command=lambda: mueble._remove_detail_row(self)).pack(side="left", padx=3)
@@ -526,8 +542,10 @@ class DetailRow(ctk.CTkFrame):
         # Recalculate on FocusOut and Enter
         self.cant_entry.bind("<FocusOut>", lambda e: self._recalc())
         self.precio_entry.bind("<FocusOut>", lambda e: self._recalc())
+        self.margen_entry.bind("<FocusOut>", lambda e: self._recalc())
         self.cant_entry.bind("<Return>", lambda e: self._recalc())
         self.precio_entry.bind("<Return>", lambda e: self._recalc())
+        self.margen_entry.bind("<Return>", lambda e: self._recalc())
 
         if data:
             if data.get("categoria"): self.cat_var.set(data["categoria"])
@@ -548,14 +566,17 @@ class DetailRow(ctk.CTkFrame):
         self._update_total()
 
     def _on_category_change(self, cat):
-        """Auto-fill price for Mano de Obra."""
+        """Auto-fill price for Mano de Obra and auto-set margin per category."""
+        # Auto-set margin based on category
+        new_margin = self._DEFAULT_MARGINS.get(cat, self._DEFAULT_MARGIN)
+        self.margen_entry.delete(0, "end")
+        self.margen_entry.insert(0, new_margin)
+
         if cat == "Mano de Obra":
             self.precio_entry.delete(0, "end")
             self.precio_entry.insert(0, str(DetailRow._cached_precio_hora))
             self.desc_combo.set("Mano de obra")
-            self._recalc()
-        elif cat == "Cristal":
-            self._recalc()  # Triggers recalc with cristal margin logic
+        self._recalc()
 
     def _on_proveedor_change(self, prov):
         if prov == "(manual)":
@@ -592,6 +613,10 @@ class DetailRow(ctk.CTkFrame):
     def get_total(self):
         try: return float(self.cant_entry.get().replace(",",".")) * float(self.precio_entry.get().replace(",","."))
         except ValueError: return 0
+
+    def get_margen(self):
+        try: return float(self.margen_entry.get().replace(",", "."))
+        except ValueError: return 100
 
     def get_data(self):
         try: c = float(self.cant_entry.get().replace(",","."))

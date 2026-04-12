@@ -153,8 +153,43 @@ class ConfiguracionView(ctk.CTkFrame):
                       fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
                       command=self._guardar_ruta).pack(anchor="w", pady=(10, 5))
 
+        # Google Drive
+        drive_card = self._card(scroll, "Google Drive", 2, 1)
+
+        ctk.CTkLabel(drive_card, text="Exportar automáticamente a Google Drive\ncuando generes presupuestos o facturas:",
+                     font=ctk.CTkFont(size=12),
+                     text_color=self.app.COLOR_TEXT_LIGHT, justify="left").pack(anchor="w", pady=(0, 8))
+
+        self.drive_enabled_var = ctk.BooleanVar(
+            value=self.app.config_model.obtener("auto_exportar_drive") == "1"
+        )
+        ctk.CTkCheckBox(drive_card, text="Activar exportación a Google Drive",
+                        variable=self.drive_enabled_var,
+                        font=ctk.CTkFont(size=13)).pack(anchor="w", pady=(0, 8))
+
+        drive_ruta_frame = ctk.CTkFrame(drive_card, fg_color="transparent")
+        drive_ruta_frame.pack(fill="x", pady=3)
+        ctk.CTkLabel(drive_ruta_frame, text="Ruta Drive:", font=ctk.CTkFont(size=13),
+                     text_color=self.app.COLOR_TEXT, width=90, anchor="w").pack(side="left")
+        self.drive_ruta_entry = ctk.CTkEntry(drive_ruta_frame, width=280, height=30,
+                                              placeholder_text="Ej: G:\\Mi unidad\\ShibbiShop")
+        self.drive_ruta_entry.pack(side="left", padx=(0, 8))
+        val = self.app.config_model.obtener("ruta_drive") or ""
+        self.drive_ruta_entry.insert(0, val)
+        ctk.CTkButton(drive_ruta_frame, text="Examinar", width=90, height=30,
+                      fg_color="#6c757d", hover_color="#495057",
+                      command=self._browse_drive_ruta).pack(side="left")
+
+        ctk.CTkLabel(drive_card, text="Si la ruta no es válida o no hay espacio,\nla exportación normal no se verá afectada.",
+                     font=ctk.CTkFont(size=11),
+                     text_color=self.app.COLOR_TEXT_LIGHT, justify="left").pack(anchor="w", pady=(5, 0))
+
+        ctk.CTkButton(drive_card, text="Guardar Drive", width=150,
+                      fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
+                      command=self._guardar_drive).pack(anchor="w", pady=(10, 5))
+
         # Numeración
-        num_card = self._card(scroll, "Numeración", 2, 1)
+        num_card = self._card(scroll, "Numeración", 3, 0)
 
         ctk.CTkLabel(num_card, text="Si ya tienes facturas/presupuestos creados,\nindica el último número usado:",
                      font=ctk.CTkFont(size=12),
@@ -219,6 +254,22 @@ class ConfiguracionView(ctk.CTkFrame):
         self.app.config_model.establecer("ruta_salida", val,
                                           "Ruta base para guardar documentos")
         messagebox.showinfo("Guardado", f"Ruta de salida: {val or '(por defecto)'}")
+
+    def _browse_drive_ruta(self):
+        path = filedialog.askdirectory(title="Seleccionar carpeta de Google Drive")
+        if path:
+            self.drive_ruta_entry.delete(0, "end")
+            self.drive_ruta_entry.insert(0, path)
+
+    def _guardar_drive(self):
+        ruta = self.drive_ruta_entry.get().strip()
+        enabled = "1" if self.drive_enabled_var.get() else "0"
+        self.app.config_model.establecer("ruta_drive", ruta,
+                                          "Ruta de Google Drive para auto-exportar")
+        self.app.config_model.establecer("auto_exportar_drive", enabled,
+                                          "Exportar automáticamente a Google Drive (0/1)")
+        estado = "activada" if enabled == "1" else "desactivada"
+        messagebox.showinfo("Guardado", f"Google Drive {estado}.\nRuta: {ruta or '(no configurada)'}")
 
     def _guardar_numeracion(self):
         for clave, entry in self.num_fields.items():

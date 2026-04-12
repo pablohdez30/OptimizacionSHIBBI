@@ -264,6 +264,8 @@ class Database:
             ("empresa_marca", "ShibbiShop", "Nombre comercial"),
             ("condiciones_pago_default", "50% adelanto - 50% antes de la entrega del trabajo.", "Condiciones de pago"),
             ("dias_validez_default", "15", "Días de validez del presupuesto"),
+            ("ruta_drive", "", "Ruta de Google Drive para auto-exportar"),
+            ("auto_exportar_drive", "0", "Exportar automáticamente a Google Drive (0/1)"),
         ]
         for clave, valor, desc in defaults:
             cursor.execute(

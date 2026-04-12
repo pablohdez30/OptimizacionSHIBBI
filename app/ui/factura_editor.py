@@ -346,9 +346,11 @@ class FacturaEditorView(ctk.CTkFrame):
         if not fid:
             return
         from app.utils.factura_generator import generar_factura_excel, generar_factura_pdf
+        from app.utils.output_path import copiar_a_drive
 
         paths = []
         errors = []
+        drive_warnings = []
 
         for name, func in [("Excel factura", generar_factura_excel),
                             ("PDF factura", generar_factura_pdf)]:
@@ -356,6 +358,10 @@ class FacturaEditorView(ctk.CTkFrame):
                 path = func(self.app, fid)
                 if path:
                     paths.append(path)
+                    # Copy to Google Drive
+                    ok, err = copiar_a_drive(path, app=self.app)
+                    if err and err not in drive_warnings:
+                        drive_warnings.append(err)
             except PermissionError:
                 errors.append(f"{name}: archivo abierto, ciérralo primero")
             except Exception as e:
@@ -364,11 +370,13 @@ class FacturaEditorView(ctk.CTkFrame):
         msg = ""
         if paths:
             msg += "Archivos generados:\n" + "\n".join(f"  {p}" for p in paths)
+        if drive_warnings:
+            msg += "\n\nAvisos Drive:\n" + "\n".join(f"  {w}" for w in drive_warnings)
         if errors:
             msg += "\n\nErrores:\n" + "\n".join(f"  {e}" for e in errors)
 
-        if errors:
-            messagebox.showwarning("Exportación parcial", msg)
+        if errors or drive_warnings:
+            messagebox.showwarning("Exportación" + (" parcial" if errors else ""), msg)
         elif paths:
             messagebox.showinfo("Factura exportada", msg)
 
