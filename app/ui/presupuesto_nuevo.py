@@ -396,8 +396,8 @@ class MuebleFrame(ctk.CTkFrame):
         table.pack(fill="x", padx=15, pady=(5, 5))
         th = ctk.CTkFrame(table, fg_color="#f0f2f5", corner_radius=4)
         th.pack(fill="x", pady=(0, 3))
-        for text, w in [("Categoría", 130), ("Proveedor", 130), ("Material", 170),
-                        ("Cant.", 70), ("Precio Ud.", 90), ("Total", 90), ("Margen%", 65)]:
+        for text, w in [("Categoría", 135), ("Proveedor", 135), ("Material", 250),
+                        ("Cant.", 75), ("Precio Ud.", 95), ("Margen%", 65), ("Total", 90)]:
             ctk.CTkLabel(th, text=text, width=w, font=ctk.CTkFont(size=11, weight="bold"),
                          text_color=self.app.COLOR_TEXT_LIGHT, anchor="w").pack(side="left", padx=3, pady=5)
         self.rows_container = ctk.CTkFrame(table, fg_color="transparent")
@@ -524,16 +524,15 @@ class DetailRow(ctk.CTkFrame):
         self.precio_entry = ctk.CTkEntry(self, width=95, height=34, font=ctk.CTkFont(size=13))
         self.precio_entry.pack(side="left", padx=3); self.precio_entry.insert(0, "0")
 
+        # Per-line margin entry (before Total)
+        self.margen_entry = ctk.CTkEntry(self, width=65, height=34, font=ctk.CTkFont(size=13))
+        self.margen_entry.pack(side="left", padx=3)
+        default_m = self._DEFAULT_MARGINS.get(self.cat_var.get(), self._DEFAULT_MARGIN)
+        self.margen_entry.insert(0, default_m)
+
         self.total_label = ctk.CTkLabel(self, text="0.00€", width=90, font=ctk.CTkFont(size=12),
                                          text_color=app.COLOR_TEXT, anchor="e")
         self.total_label.pack(side="left", padx=3)
-
-        # Per-line margin entry
-        self.margen_entry = ctk.CTkEntry(self, width=65, height=34, font=ctk.CTkFont(size=13))
-        self.margen_entry.pack(side="left", padx=3)
-        # Set default margin based on initial category
-        default_m = self._DEFAULT_MARGINS.get(self.cat_var.get(), self._DEFAULT_MARGIN)
-        self.margen_entry.insert(0, default_m)
 
         ctk.CTkButton(self, text="x", width=26, height=26, fg_color="#dc3545", hover_color="#c1121f",
                       font=ctk.CTkFont(size=11),
