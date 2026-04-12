@@ -70,7 +70,9 @@ def generar_factura_excel(app, factura_id):
     ws["B5"] = factura["cliente_nombre"]
     ws["B5"].font = Font(bold=True, size=12)
     ws["B6"] = factura["cliente_direccion"] or ""
-    ws["B8"] = factura["cliente_nif"] or ""
+    # NIF next to its label (A7 contains "C.I.F./N.I.F:" in the template)
+    ws["B7"] = factura["cliente_nif"] or ""
+    ws["B8"] = ""  # Clear template's default NIF position
 
     # Clear product rows (10-19)
     for r in range(10, 20):
@@ -137,11 +139,12 @@ def generar_factura_excel(app, factura_id):
     ws["G23"].number_format = money_fmt
     ws["G23"].font = bold_font
 
-    # NO condiciones de pago section - clear those rows
-    for r in range(24, 27):
+    # NO condiciones de pago section - clear template's condiciones AND
+    # the template's hardcoded bank line at row 27 (avoids duplication)
+    for r in range(24, 28):
         ws.cell(row=r, column=1).value = None
 
-    # Only bank transfer line
+    # Only one bank transfer line
     ws["A24"] = f"Pago mediante transferencia bancaria: CC: {empresa_cuenta}"
     ws["A24"].font = Font(bold=True, size=12)
 
@@ -224,8 +227,7 @@ def generar_factura_pdf(app, factura_id):
         [Paragraph("FECHA:", s_normal), Paragraph(fecha_str, s_normal), "", ""],
         [Paragraph("CLIENTE:", s_normal), Paragraph(f"<b>{factura['cliente_nombre']}</b>", s_bold12), "", ""],
         [Paragraph("DIRECCIÓN:", s_normal), Paragraph(factura["cliente_direccion"] or "", s_normal), "", ""],
-        [Paragraph("C.I.F./N.I.F:", s_normal), "", "", ""],
-        ["", Paragraph(factura["cliente_nif"] or "", s_normal), "", ""],
+        [Paragraph("C.I.F./N.I.F:", s_normal), Paragraph(factura["cliente_nif"] or "", s_normal), "", ""],
     ]
 
     it = Table(info_data, colWidths=[35 * mm, 55 * mm, 40 * mm, 40 * mm])

@@ -60,7 +60,9 @@ def generar_excel_plantilla(app, presupuesto_id):
     ws["B5"] = pres["cliente_nombre"]
     ws["B5"].font = Font(bold=True, size=12)
     ws["B6"] = pres["cliente_direccion"] or ""
-    ws["B8"] = pres["cliente_nif"] or ""
+    # NIF next to its label (A7 contains "C.I.F./N.I.F:" in the template)
+    ws["B7"] = pres["cliente_nif"] or ""
+    ws["B8"] = ""  # Clear template's default NIF position
 
     # Clear product rows (10-19)
     for r in range(10, 20):

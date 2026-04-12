@@ -78,8 +78,7 @@ def generar_pdf_presupuesto(app, presupuesto_id):
         [Paragraph("FECHA:", s_normal), Paragraph(fecha_str, s_normal), "", ""],
         [Paragraph("CLIENTE:", s_normal), Paragraph(f"<b>{pres['cliente_nombre']}</b>", s_bold12), "", ""],
         [Paragraph("DIRECCIÓN:", s_normal), Paragraph(pres["cliente_direccion"] or "", s_normal), "", ""],
-        [Paragraph("C.I.F./N.I.F:", s_normal), "", "", ""],
-        ["", Paragraph(pres["cliente_nif"] or "", s_normal), "", ""],
+        [Paragraph("C.I.F./N.I.F:", s_normal), Paragraph(pres["cliente_nif"] or "", s_normal), "", ""],
     ]
 
     it = Table(info_data, colWidths=[35 * mm, 55 * mm, 40 * mm, 40 * mm])

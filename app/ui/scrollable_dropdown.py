@@ -16,7 +16,12 @@ class ScrollableComboBox(ctk.CTkFrame):
     def __init__(self, parent, values=None, width=250, height=32, command=None,
                  font=None, placeholder_text="Escribe para buscar...",
                  dropdown_font_size=20, dropdown_max_items=25, min_dropdown_width=500, **kwargs):
-        super().__init__(parent, fg_color="transparent", **kwargs)
+        # Fixed width/height so long text inside the entry can't push the
+        # frame wider and misalign adjacent columns.
+        super().__init__(parent, fg_color="transparent",
+                         width=width, height=height, **kwargs)
+        self.pack_propagate(False)
+        self.grid_propagate(False)
         self._values = values or []
         self._filtered = list(self._values)
         self._command = command
@@ -29,14 +34,15 @@ class ScrollableComboBox(ctk.CTkFrame):
         self._selected_idx = -1
         self._filter_after_id = None
 
-        # Entry field
-        self._entry = ctk.CTkEntry(self, width=width - 32, height=height,
+        # Entry field — fixed width, no expand (prevents column shift)
+        btn_w = 32
+        self._entry = ctk.CTkEntry(self, width=width - btn_w - 4, height=height,
                                     font=font or ctk.CTkFont(size=13),
                                     placeholder_text=placeholder_text)
-        self._entry.pack(side="left", fill="x", expand=True)
+        self._entry.pack(side="left")
 
         # Dropdown toggle button
-        self._btn = ctk.CTkButton(self, text="▼", width=32, height=height,
+        self._btn = ctk.CTkButton(self, text="▼", width=btn_w, height=height,
                                    fg_color="#d5d5d5", hover_color="#bbb",
                                    text_color="#444", font=ctk.CTkFont(size=11),
                                    corner_radius=6,
