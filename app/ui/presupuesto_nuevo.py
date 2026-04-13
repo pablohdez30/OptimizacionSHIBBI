@@ -349,6 +349,12 @@ class NuevoPresupuestoView(ctk.CTkFrame):
                 "detalles": [{"categoria": d["categoria_nombre"] or "", "proveedor": d["proveedor_nombre"] or "",
                               "descripcion": d["descripcion"] or "", "cantidad": d["cantidad"],
                               "precio_unitario": d["precio_unitario"]} for d in detalles]})
+        # Force recalculation of every mueble so its Coste / Precio cliente
+        # labels reflect the loaded data (row totals are refreshed too).
+        for mf in self.mueble_frames:
+            for dr in mf.detail_rows:
+                dr._update_total()
+            mf._recalculate()
         self._update_summary()
 
     def _exportar_presupuesto(self):
