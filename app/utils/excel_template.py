@@ -64,10 +64,15 @@ def generar_excel_plantilla(app, presupuesto_id):
     ws["B7"] = pres["cliente_nif"] or ""
     ws["B8"] = ""  # Clear template's default NIF position
 
-    # Clear product rows (10-19)
+    # Clear product rows (10-19) in all the columns we write to
     for r in range(10, 20):
-        for c in [1, 7]:
+        for c in [1, 5, 6, 7]:
             ws.cell(row=r, column=c).value = None
+
+    # Set column headers (factura-style: Unidades, PX, Total)
+    ws.cell(row=9, column=5, value="Unidades").font = Font(bold=True, size=10)
+    ws.cell(row=9, column=6, value="PX").font = Font(bold=True, size=10)
+    ws.cell(row=9, column=7, value="Total").font = Font(bold=True, size=10)
 
     # Fill products
     lineas = app.presupuesto_model.obtener_lineas(presupuesto_id)
@@ -78,10 +83,15 @@ def generar_excel_plantilla(app, presupuesto_id):
     money_fmt = '#,##0.00 €'
 
     for linea in lineas:
-        precio_total = linea["precio_unitario_final"] * linea["cantidad"]
+        cantidad = linea["cantidad"]
+        precio_unit = linea["precio_unitario_final"]
+        precio_total = precio_unit * cantidad
         total_base += precio_total
 
         ws.cell(row=row, column=1, value=linea["nombre_producto"]).font = bold_font
+        ws.cell(row=row, column=5, value=cantidad).font = normal_font
+        ws.cell(row=row, column=6, value=precio_unit).font = normal_font
+        ws.cell(row=row, column=6).number_format = money_fmt
         ws.cell(row=row, column=7, value=precio_total).font = normal_font
         ws.cell(row=row, column=7).number_format = money_fmt
         row += 1
@@ -91,10 +101,6 @@ def generar_excel_plantilla(app, presupuesto_id):
                 if desc_line.strip() and row < 18:
                     ws.cell(row=row, column=1, value=desc_line.strip()).font = normal_font
                     row += 1
-
-        if linea["cantidad"] > 1 and row < 18:
-            ws.cell(row=row, column=1, value=f"({linea['cantidad']} unidades)").font = normal_font
-            row += 1
 
     # Porte
     if not pres["incluye_instalacion"]:

@@ -91,11 +91,17 @@ def generar_pdf_presupuesto(app, presupuesto_id):
     elements.append(it)
     elements.append(Spacer(1, 8 * mm))
 
-    # --- Black bar + "Base" header ---
-    bar_data = [["", Paragraph("<b>Base</b>", s_right_bold)]]
-    bt = Table(bar_data, colWidths=[135 * mm, 35 * mm])
+    # --- Column headers bar ---
+    bar_data = [[
+        Paragraph("<b>Concepto</b>", s_bold),
+        Paragraph("<b>Unidades</b>", s_right_bold),
+        Paragraph("<b>PX</b>", s_right_bold),
+        Paragraph("<b>Total</b>", s_right_bold),
+    ]]
+    bt = Table(bar_data, colWidths=[85 * mm, 25 * mm, 30 * mm, 30 * mm])
     bt.setStyle(TableStyle([
         ("LINEABOVE", (0, 0), (-1, 0), 2, border_color),
+        ("LINEBELOW", (0, 0), (-1, 0), 0.5, border_color),
         ("TOPPADDING", (0, 0), (-1, 0), 4),
         ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
     ]))
@@ -106,13 +112,19 @@ def generar_pdf_presupuesto(app, presupuesto_id):
     total_base = 0
 
     for linea in lineas:
-        precio_total = linea["precio_unitario_final"] * linea["cantidad"]
+        cantidad = linea["cantidad"]
+        precio_unit = linea["precio_unitario_final"]
+        precio_total = precio_unit * cantidad
         total_base += precio_total
 
-        # Product name + price
-        prod_row = [[Paragraph(f"<b>{linea['nombre_producto']}</b>", s_bold),
-                     Paragraph(f"€ {precio_total:,.2f}", s_right)]]
-        pt = Table(prod_row, colWidths=[135 * mm, 35 * mm])
+        # Product row: name | units | unit price | total
+        prod_row = [[
+            Paragraph(f"<b>{linea['nombre_producto']}</b>", s_bold),
+            Paragraph(f"{cantidad}", s_right),
+            Paragraph(f"{precio_unit:,.2f}", s_right),
+            Paragraph(f"{precio_total:,.2f}", s_right),
+        ]]
+        pt = Table(prod_row, colWidths=[85 * mm, 25 * mm, 30 * mm, 30 * mm])
         pt.setStyle(TableStyle([
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("TOPPADDING", (0, 0), (-1, 0), 3),
@@ -120,14 +132,11 @@ def generar_pdf_presupuesto(app, presupuesto_id):
         ]))
         elements.append(pt)
 
-        # Description lines
+        # Description lines (below product, left-aligned)
         if linea["descripcion"]:
             for desc_line in linea["descripcion"].split("\n"):
                 if desc_line.strip():
                     elements.append(Paragraph(desc_line.strip(), s_normal))
-
-        if linea["cantidad"] > 1:
-            elements.append(Paragraph(f"({linea['cantidad']} unidades)", s_normal))
 
         elements.append(Spacer(1, 2 * mm))
 

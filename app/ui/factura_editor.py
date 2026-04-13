@@ -337,11 +337,23 @@ class FacturaEditorView(ctk.CTkFrame):
         self.title_label.configure(text=f"Factura {numero}")
         return self.factura_id
 
+    def _confirmar_edicion_existente(self):
+        """Ask before overwriting an existing factura, in case the user
+        opened the wrong one."""
+        return messagebox.askyesno(
+            "Confirmar edición",
+            "Estás editando una factura que ya existía.\n\n"
+            "¿Seguro que quieres guardar los cambios sobre ella?")
+
     def _guardar_con_mensaje(self):
+        if not self._confirmar_edicion_existente():
+            return
         if self._guardar():
             messagebox.showinfo("Guardado", "Factura guardada correctamente.")
 
     def _exportar(self):
+        if not self._confirmar_edicion_existente():
+            return
         fid = self._guardar()
         if not fid:
             return

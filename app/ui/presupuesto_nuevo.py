@@ -12,6 +12,9 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent")
         self.app = app
         self.presupuesto_id = presupuesto_id
+        # True if this view was opened on an EXISTING presupuesto (loaded from DB)
+        # Used to ask for confirmation before overwriting
+        self._was_loaded_existing = bool(presupuesto_id)
         self.mueble_frames = []
         self._cached_iva_pct = self.app.config_model.obtener_float("iva_porcentaje", 21)
         self._refresh_timer = None
@@ -101,9 +104,9 @@ class NuevoPresupuestoView(ctk.CTkFrame):
                       command=self._quick_new_client).pack(side="left", padx=(5, 20))
         ctk.CTkLabel(row0_right, text="Nº:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.numero_label = ctk.CTkLabel(row0_right, text="(auto)", font=ctk.CTkFont(size=13),
-                                          text_color=self.app.COLOR_TEXT_LIGHT)
-        self.numero_label.pack(side="left", padx=10)
+        self.numero_entry = ctk.CTkEntry(row0_right, width=100, height=30,
+                                          placeholder_text="(auto)")
+        self.numero_entry.pack(side="left", padx=10)
         ctk.CTkLabel(row0_right, text="Fecha:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left", padx=(20, 0))
         self.fecha_entry = ctk.CTkEntry(row0_right, width=110, height=30)
@@ -221,7 +224,8 @@ class NuevoPresupuestoView(ctk.CTkFrame):
 
     def _nuevo_presupuesto(self):
         self.presupuesto_id = None
-        self.numero_label.configure(text="(auto)")
+        self._was_loaded_existing = False
+        self.numero_entry.delete(0, "end")
         self.title_label.configure(text="Nuevo Presupuesto")
         for f in [self.proyecto_entry, self.notas_entry, self.fecha_entry]:
             f.delete(0, "end")
@@ -258,12 +262,24 @@ class NuevoPresupuestoView(ctk.CTkFrame):
         if not self.mueble_frames:
             messagebox.showwarning("Aviso", "Añade al menos un mueble/producto."); return None
         proyecto = self.proyecto_entry.get().strip()
+        nuevo_numero = self.numero_entry.get().strip()
         if self.presupuesto_id:
-            self.app.presupuesto_model.actualizar(
-                self.presupuesto_id, cliente_id=cliente_id, proyecto=proyecto,
+            campos = dict(
+                cliente_id=cliente_id, proyecto=proyecto,
                 notas_internas=self.notas_entry.get().strip(),
                 incluye_instalacion=1 if self.instalacion_var.get() else 0,
                 condiciones_pago=self.condiciones_combo.get())
+            # Allow changing the Nº if user edited it
+            pres_actual = self.app.presupuesto_model.obtener(self.presupuesto_id)
+            if nuevo_numero and pres_actual and nuevo_numero != pres_actual["numero_presupuesto"]:
+                campos["numero_presupuesto"] = nuevo_numero
+            try:
+                self.app.presupuesto_model.actualizar(self.presupuesto_id, **campos)
+            except Exception as e:
+                messagebox.showerror("Error",
+                    f"No se pudo actualizar el presupuesto.\n"
+                    f"Puede que el Nº '{nuevo_numero}' ya exista.\n\n{e}")
+                return None
             for ol in self.app.presupuesto_model.obtener_lineas(self.presupuesto_id):
                 self.app.presupuesto_model.eliminar_linea(ol["id"])
             pres_id = self.presupuesto_id
@@ -286,18 +302,34 @@ class NuevoPresupuestoView(ctk.CTkFrame):
                     det["descripcion"], det["cantidad"], det["precio_unitario"], "")
         pres = self.app.presupuesto_model.obtener(pres_id)
         if pres:
-            self.numero_label.configure(text=pres["numero_presupuesto"])
+            self.numero_entry.delete(0, "end")
+            self.numero_entry.insert(0, pres["numero_presupuesto"])
             self.title_label.configure(text=f"Presupuesto {pres['numero_presupuesto']}")
         return pres_id
 
+    def _confirmar_edicion_existente(self):
+        """Ask for confirmation when modifying a presupuesto that was loaded
+        from the database. Prevents accidentally overwriting an existing
+        budget when the user meant to create a new one."""
+        if not self._was_loaded_existing:
+            return True
+        return messagebox.askyesno(
+            "Confirmar edición",
+            "Estás editando un presupuesto que ya existía.\n\n"
+            "¿Seguro que quieres guardar los cambios sobre él?\n"
+            "(Si querías crear uno nuevo, pulsa 'No' y usa el botón '+ Nuevo')")
+
     def _guardar_con_mensaje(self):
+        if not self._confirmar_edicion_existente():
+            return
         if self._guardar():
             messagebox.showinfo("Guardado", "Presupuesto guardado correctamente.")
 
     def _cargar_presupuesto(self):
         pres = self.app.presupuesto_model.obtener(self.presupuesto_id)
         if not pres: return
-        self.numero_label.configure(text=pres["numero_presupuesto"])
+        self.numero_entry.delete(0, "end")
+        self.numero_entry.insert(0, pres["numero_presupuesto"])
         self.title_label.configure(text=f"Presupuesto {pres['numero_presupuesto']}")
         self.fecha_entry.delete(0, "end")
         try: self.fecha_entry.insert(0, datetime.strptime(pres["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y"))
@@ -321,6 +353,8 @@ class NuevoPresupuestoView(ctk.CTkFrame):
 
     def _exportar_presupuesto(self):
         """Export all: Excel presupuesto (template) + PDF + Excel desglose."""
+        if not self._confirmar_edicion_existente():
+            return
         pid = self._guardar()
         if not pid:
             return
