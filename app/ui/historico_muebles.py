@@ -82,8 +82,8 @@ class HistoricoMueblesView(ctk.CTkFrame):
         table_frame.grid_rowconfigure(0, weight=1)
 
         style = ttk.Style()
-        style.configure("Hist.Treeview", font=("Segoe UI", 11), rowheight=28)
-        style.configure("Hist.Treeview.Heading", font=("Segoe UI", 11, "bold"))
+        style.configure("Hist.Treeview", font=("Segoe UI", 13), rowheight=36)
+        style.configure("Hist.Treeview.Heading", font=("Segoe UI", 12, "bold"))
 
         columns = ("categoria", "nombre", "descripcion", "cliente",
                    "precio_ud", "cant", "fecha", "presupuesto")
@@ -91,14 +91,14 @@ class HistoricoMueblesView(ctk.CTkFrame):
                                   style="Hist.Treeview")
 
         headings = [
-            ("categoria", "Categoría", 110),
-            ("nombre", "Nombre", 180),
-            ("descripcion", "Descripción", 200),
-            ("cliente", "Cliente", 160),
-            ("precio_ud", "Precio Ud.", 100),
-            ("cant", "Cant.", 60),
+            ("categoria", "Categoría", 100),
+            ("nombre", "Nombre", 170),
+            ("descripcion", "Descripción", 170),
+            ("cliente", "Cliente", 150),
+            ("precio_ud", "Precio Ud.", 95),
+            ("cant", "Uds.", 50),
             ("fecha", "Fecha", 90),
-            ("presupuesto", "Nº Presup.", 90),
+            ("presupuesto", "Nº Presup.", 85),
         ]
         for col, text, w in headings:
             self.tree.heading(col, text=text)
