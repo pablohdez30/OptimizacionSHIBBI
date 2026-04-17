@@ -218,6 +218,32 @@ class ConfiguracionView(ctk.CTkFrame):
                       fg_color=self.app.COLOR_SUCCESS, hover_color="#1b4332",
                       command=self._guardar_numeracion).pack(anchor="w", pady=(10, 5))
 
+        # Categorías de mueble (para Histórico)
+        cat_m_card = self._card(scroll, "Categorías de Mueble", 3, 1)
+
+        cats_mueble = self.app.categoria_mueble_model.listar()
+        for cat in cats_mueble:
+            cat_row = ctk.CTkFrame(cat_m_card, fg_color="transparent")
+            cat_row.pack(fill="x", pady=2)
+            ctk.CTkLabel(cat_row, text=f"  {cat['nombre']}",
+                         font=ctk.CTkFont(size=13),
+                         text_color=self.app.COLOR_TEXT).pack(side="left")
+            ctk.CTkButton(cat_row, text="x", width=22, height=22,
+                          fg_color="#dc3545", hover_color="#c1121f",
+                          font=ctk.CTkFont(size=10),
+                          command=lambda cid=cat["id"], cn=cat["nombre"]: self._delete_cat_mueble(cid, cn)
+                          ).pack(side="right", padx=5)
+
+        add_m_frame = ctk.CTkFrame(cat_m_card, fg_color="transparent")
+        add_m_frame.pack(fill="x", pady=(10, 5))
+        self.new_cat_mueble_entry = ctk.CTkEntry(add_m_frame, placeholder_text="Nueva categoría...",
+                                                   width=200, height=30)
+        self.new_cat_mueble_entry.pack(side="left", padx=(0, 8))
+        ctk.CTkButton(add_m_frame, text="Añadir", width=80,
+                      fg_color=self.app.COLOR_ACCENT,
+                      hover_color=self.app.COLOR_ACCENT_HOVER,
+                      command=self._add_cat_mueble).pack(side="left")
+
     def _card(self, parent, title, row, col):
         card = ctk.CTkFrame(parent, fg_color=self.app.COLOR_CARD, corner_radius=12)
         card.grid(row=row, column=col, sticky="new", padx=8, pady=8)
@@ -296,5 +322,25 @@ class ConfiguracionView(ctk.CTkFrame):
         self.app.categoria_model.crear(nombre)
         self.new_cat_entry.delete(0, "end")
         messagebox.showinfo("Añadida", f"Categoría '{nombre}' añadida.")
-        # Refresh view
+        self.app._show_view("configuracion")
+
+    def _delete_cat_mueble(self, cat_id, cat_name):
+        if messagebox.askyesno("Confirmar", f"¿Eliminar la categoría de mueble '{cat_name}'?"):
+            try:
+                self.app.db.execute("DELETE FROM categorias_mueble WHERE id = ?", (cat_id,))
+                from app.ui.presupuesto_nuevo import MuebleFrame
+                MuebleFrame._cached_cat_mueble_names = None
+                self.app._show_view("configuracion")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se puede eliminar: {e}")
+
+    def _add_cat_mueble(self):
+        nombre = self.new_cat_mueble_entry.get().strip()
+        if not nombre:
+            return
+        self.app.categoria_mueble_model.crear(nombre)
+        self.new_cat_mueble_entry.delete(0, "end")
+        from app.ui.presupuesto_nuevo import MuebleFrame
+        MuebleFrame._cached_cat_mueble_names = None
+        messagebox.showinfo("Añadida", f"Categoría de mueble '{nombre}' añadida.")
         self.app._show_view("configuracion")

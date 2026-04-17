@@ -306,18 +306,23 @@ class PresupuestoModel:
 
     # --- Líneas de presupuesto ---
     def agregar_linea(self, presupuesto_id, nombre_producto, descripcion="",
-                      cantidad=1, precio_unitario_final=0, margen_porcentaje=100, orden=0):
+                      cantidad=1, precio_unitario_final=0, margen_porcentaje=100,
+                      orden=0, categoria_mueble_id=None):
         return self.db.execute(
             """INSERT INTO lineas_presupuesto (presupuesto_id, nombre_producto,
-               descripcion, cantidad, precio_unitario_final, margen_porcentaje, orden)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               descripcion, cantidad, precio_unitario_final, margen_porcentaje,
+               orden, categoria_mueble_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (presupuesto_id, nombre_producto, descripcion, cantidad,
-             precio_unitario_final, margen_porcentaje, orden)
+             precio_unitario_final, margen_porcentaje, orden, categoria_mueble_id)
         ).lastrowid
 
     def obtener_lineas(self, presupuesto_id):
         return self.db.fetchall(
-            "SELECT * FROM lineas_presupuesto WHERE presupuesto_id = ? ORDER BY orden",
+            """SELECT lp.*, cm.nombre as categoria_mueble_nombre
+               FROM lineas_presupuesto lp
+               LEFT JOIN categorias_mueble cm ON lp.categoria_mueble_id = cm.id
+               WHERE lp.presupuesto_id = ? ORDER BY lp.orden""",
             (presupuesto_id,)
         )
 
@@ -534,6 +539,97 @@ class FacturaModel:
                 orden += 1
 
         return factura_id
+
+
+class CategoriaMuebleModel:
+    def __init__(self, db):
+        self.db = db
+
+    def listar(self):
+        return self.db.fetchall("SELECT * FROM categorias_mueble ORDER BY orden")
+
+    def crear(self, nombre):
+        max_orden = self.db.fetchone("SELECT MAX(orden) as m FROM categorias_mueble")
+        orden = (max_orden["m"] or 0) + 1
+        return self.db.execute(
+            "INSERT INTO categorias_mueble (nombre, orden, es_personalizada) VALUES (?, ?, 1)",
+            (nombre, orden)
+        ).lastrowid
+
+    def obtener_por_nombre(self, nombre):
+        return self.db.fetchone(
+            "SELECT * FROM categorias_mueble WHERE nombre = ?", (nombre,)
+        )
+
+
+class HistoricoMueblesModel:
+    def __init__(self, db):
+        self.db = db
+
+    def sincronizar_presupuesto(self, presupuesto_id):
+        """Delete + re-insert all historic records for a presupuesto,
+        based on current lineas_presupuesto."""
+        pres = self.db.fetchone(
+            "SELECT cliente_id, fecha FROM presupuestos WHERE id = ?",
+            (presupuesto_id,))
+        if not pres:
+            return
+        self.db.execute(
+            "DELETE FROM historico_muebles WHERE presupuesto_id = ?",
+            (presupuesto_id,))
+        lineas = self.db.fetchall(
+            "SELECT * FROM lineas_presupuesto WHERE presupuesto_id = ? ORDER BY orden",
+            (presupuesto_id,))
+        for linea in lineas:
+            precio_unit = linea["precio_unitario_final"]
+            cant = linea["cantidad"] or 1
+            self.db.execute(
+                """INSERT INTO historico_muebles
+                   (linea_presupuesto_id, presupuesto_id, cliente_id,
+                    categoria_mueble_id, nombre, descripcion, fecha,
+                    precio_unitario, cantidad)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (linea["id"], presupuesto_id, pres["cliente_id"],
+                 linea["categoria_mueble_id"],
+                 linea["nombre_producto"],
+                 linea["descripcion"] or "",
+                 pres["fecha"],
+                 precio_unit,
+                 cant))
+
+    def buscar(self, categoria_mueble_id=None, cliente_id=None, texto=None, limit=500):
+        query = """SELECT h.*,
+                          cm.nombre as categoria_nombre,
+                          c.nombre as cliente_nombre,
+                          p.numero_presupuesto
+                   FROM historico_muebles h
+                   LEFT JOIN categorias_mueble cm ON h.categoria_mueble_id = cm.id
+                   LEFT JOIN clientes c ON h.cliente_id = c.id
+                   LEFT JOIN presupuestos p ON h.presupuesto_id = p.id
+                   WHERE 1=1"""
+        params = []
+        if categoria_mueble_id:
+            query += " AND h.categoria_mueble_id = ?"
+            params.append(categoria_mueble_id)
+        if cliente_id:
+            query += " AND h.cliente_id = ?"
+            params.append(cliente_id)
+        if texto:
+            query += " AND (h.nombre LIKE ? OR h.descripcion LIKE ?)"
+            params.extend([f"%{texto}%", f"%{texto}%"])
+        query += " ORDER BY cm.nombre, h.fecha DESC"
+        if limit:
+            query += f" LIMIT {limit}"
+        return self.db.fetchall(query, params)
+
+    def poblar_desde_existentes(self):
+        """One-time migration: populate historic from all existing presupuestos."""
+        count = self.db.fetchone("SELECT COUNT(*) as n FROM historico_muebles")
+        if count and count["n"] > 0:
+            return
+        pres_ids = self.db.fetchall("SELECT id FROM presupuestos ORDER BY id")
+        for row in pres_ids:
+            self.sincronizar_presupuesto(row["id"])
 
 
 class ConfiguracionModel:

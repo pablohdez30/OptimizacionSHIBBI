@@ -290,16 +290,21 @@ class NuevoPresupuestoView(ctk.CTkFrame):
                 condiciones_pago=self.condiciones_combo.get())
             self.presupuesto_id = pres_id
         prov_map = {p["nombre"]: p["id"] for p in self.app.proveedor_model.listar()}
+        cat_mueble_map = {c["nombre"]: c["id"] for c in self.app.categoria_mueble_model.listar()}
         for i, mf in enumerate(self.mueble_frames):
+            cat_mueble_id = cat_mueble_map.get(mf.cat_mueble_var.get())
             lid = self.app.presupuesto_model.agregar_linea(
                 pres_id, nombre_producto=mf.nombre_entry.get().strip() or f"Producto {i+1}",
                 descripcion=mf.desc_entry.get().strip(), cantidad=mf.get_cantidad(),
-                precio_unitario_final=mf.get_precio_cliente(), margen_porcentaje=mf.get_margen(), orden=i)
+                precio_unitario_final=mf.get_precio_cliente(), margen_porcentaje=mf.get_margen(),
+                orden=i, categoria_mueble_id=cat_mueble_id)
             for det in mf.get_detalles():
                 cat = self.app.categoria_model.obtener_por_nombre(det["categoria"])
                 self.app.presupuesto_model.agregar_detalle_coste(
                     lid, prov_map.get(det["proveedor"]), cat["id"] if cat else None,
                     det["descripcion"], det["cantidad"], det["precio_unitario"], "")
+        # Sync furniture historic
+        self.app.historico_muebles_model.sincronizar_presupuesto(pres_id)
         pres = self.app.presupuesto_model.obtener(pres_id)
         if pres:
             self.numero_entry.delete(0, "end")
@@ -346,6 +351,7 @@ class NuevoPresupuestoView(ctk.CTkFrame):
             self._add_mueble({
                 "nombre": linea["nombre_producto"], "descripcion": linea["descripcion"],
                 "cantidad": linea["cantidad"], "margen": linea["margen_porcentaje"],
+                "categoria_mueble": linea["categoria_mueble_nombre"] or "Otros",
                 "detalles": [{"categoria": d["categoria_nombre"] or "", "proveedor": d["proveedor_nombre"] or "",
                               "descripcion": d["descripcion"] or "", "cantidad": d["cantidad"],
                               "precio_unitario": d["precio_unitario"]} for d in detalles]})
@@ -409,12 +415,27 @@ class MuebleFrame(ctk.CTkFrame):
         self.app = app; self.view = view; self.detail_rows = []
         self._build_ui(data)
 
+    _cached_cat_mueble_names = None
+
     def _build_ui(self, data=None):
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.pack(fill="x", padx=15, pady=(12, 5))
+
+        # Categoría del mueble (Mesa, Estantería, etc.)
+        if MuebleFrame._cached_cat_mueble_names is None:
+            cats = self.app.categoria_mueble_model.listar()
+            MuebleFrame._cached_cat_mueble_names = [c["nombre"] for c in cats] or ["Otros"]
+        self.cat_mueble_var = ctk.StringVar(value="Otros")
+        ctk.CTkOptionMenu(header, values=MuebleFrame._cached_cat_mueble_names,
+                          variable=self.cat_mueble_var, width=120, height=30,
+                          font=ctk.CTkFont(size=12),
+                          fg_color="#e8e8e8", text_color="#1a1a2e",
+                          button_color="#d0d0d0", button_hover_color="#b0b0b0"
+                          ).pack(side="left", padx=(0, 10))
+
         ctk.CTkLabel(header, text="Nombre:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=self.app.COLOR_TEXT).pack(side="left")
-        self.nombre_entry = ctk.CTkEntry(header, width=250, height=30,
+        self.nombre_entry = ctk.CTkEntry(header, width=220, height=30,
                                           placeholder_text="Ej: Mesa Piramidal Óxido")
         self.nombre_entry.pack(side="left", padx=(8, 15))
         ctk.CTkLabel(header, text="Descripción:", font=ctk.CTkFont(size=13),
@@ -457,6 +478,8 @@ class MuebleFrame(ctk.CTkFrame):
         self.precio_label.pack(side="right", padx=15, pady=8)
 
         if data:
+            if data.get("categoria_mueble"):
+                self.cat_mueble_var.set(data["categoria_mueble"])
             self.nombre_entry.insert(0, data.get("nombre", ""))
             self.desc_entry.insert(0, data.get("descripcion", ""))
             self.cant_entry.delete(0, "end"); self.cant_entry.insert(0, str(data.get("cantidad", 1)))

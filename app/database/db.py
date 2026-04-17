@@ -163,6 +163,30 @@ class Database:
                 FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id)
             );
 
+            CREATE TABLE IF NOT EXISTS categorias_mueble (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL UNIQUE,
+                orden INTEGER DEFAULT 0,
+                es_personalizada INTEGER DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS historico_muebles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                linea_presupuesto_id INTEGER,
+                presupuesto_id INTEGER,
+                cliente_id INTEGER,
+                categoria_mueble_id INTEGER,
+                nombre TEXT DEFAULT '',
+                descripcion TEXT DEFAULT '',
+                fecha TEXT NOT NULL,
+                precio_unitario REAL DEFAULT 0,
+                cantidad INTEGER DEFAULT 1,
+                FOREIGN KEY (linea_presupuesto_id) REFERENCES lineas_presupuesto(id) ON DELETE CASCADE,
+                FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id) ON DELETE CASCADE,
+                FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
+                FOREIGN KEY (categoria_mueble_id) REFERENCES categorias_mueble(id) ON DELETE SET NULL
+            );
+
             -- Indexes for search performance
             CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos_calendario(fecha);
             CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre);
@@ -174,6 +198,10 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_facturas_cliente ON facturas(cliente_id);
             CREATE INDEX IF NOT EXISTS idx_facturas_numero ON facturas(numero_factura);
             CREATE INDEX IF NOT EXISTS idx_lineas_factura_factura ON lineas_factura(factura_id);
+            CREATE INDEX IF NOT EXISTS idx_historico_muebles_cat ON historico_muebles(categoria_mueble_id);
+            CREATE INDEX IF NOT EXISTS idx_historico_muebles_cliente ON historico_muebles(cliente_id);
+            CREATE INDEX IF NOT EXISTS idx_historico_muebles_fecha ON historico_muebles(fecha);
+            CREATE INDEX IF NOT EXISTS idx_historico_muebles_pres ON historico_muebles(presupuesto_id);
         """)
         self.conn.commit()
 
@@ -233,6 +261,43 @@ class Database:
             """)
             self.conn.commit()
 
+        # Migration: add categoria_mueble_id to lineas_presupuesto
+        try:
+            cursor.execute("SELECT categoria_mueble_id FROM lineas_presupuesto LIMIT 1")
+        except sqlite3.OperationalError:
+            cursor.execute("ALTER TABLE lineas_presupuesto ADD COLUMN categoria_mueble_id INTEGER DEFAULT NULL")
+            self.conn.commit()
+
+        # Migration: add historico_muebles tables
+        try:
+            cursor.execute("SELECT id FROM categorias_mueble LIMIT 1")
+        except sqlite3.OperationalError:
+            cursor.executescript("""
+                CREATE TABLE IF NOT EXISTS categorias_mueble (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nombre TEXT NOT NULL UNIQUE,
+                    orden INTEGER DEFAULT 0,
+                    es_personalizada INTEGER DEFAULT 0
+                );
+                CREATE TABLE IF NOT EXISTS historico_muebles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    linea_presupuesto_id INTEGER,
+                    presupuesto_id INTEGER,
+                    cliente_id INTEGER,
+                    categoria_mueble_id INTEGER,
+                    nombre TEXT DEFAULT '',
+                    descripcion TEXT DEFAULT '',
+                    fecha TEXT NOT NULL,
+                    precio_unitario REAL DEFAULT 0,
+                    cantidad INTEGER DEFAULT 1,
+                    FOREIGN KEY (linea_presupuesto_id) REFERENCES lineas_presupuesto(id) ON DELETE CASCADE,
+                    FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id) ON DELETE CASCADE,
+                    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
+                    FOREIGN KEY (categoria_mueble_id) REFERENCES categorias_mueble(id) ON DELETE SET NULL
+                );
+            """)
+            self.conn.commit()
+
     def _seed_defaults(self):
         cursor = self.conn.cursor()
 
@@ -246,6 +311,18 @@ class Database:
         for nombre, orden in categorias:
             cursor.execute(
                 "INSERT OR IGNORE INTO categorias_material (nombre, orden) VALUES (?, ?)",
+                (nombre, orden)
+            )
+
+        # Categorías de mueble por defecto
+        categorias_mueble = [
+            ("Mesa", 1), ("Mueble", 2), ("Estantería", 3),
+            ("Escultura", 4), ("Consola", 5), ("Cerramiento", 6),
+            ("Espejo", 7), ("Otros", 8),
+        ]
+        for nombre, orden in categorias_mueble:
+            cursor.execute(
+                "INSERT OR IGNORE INTO categorias_mueble (nombre, orden) VALUES (?, ?)",
                 (nombre, orden)
             )
 

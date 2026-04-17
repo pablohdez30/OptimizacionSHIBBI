@@ -3,7 +3,8 @@ from app.database import Database
 from app.database.models import (
     ClienteModel, ProveedorModel, PresupuestoModel,
     CategoriaModel, ConfiguracionModel, HistoricoPreciosModel,
-    FacturaModel, CalendarioModel
+    FacturaModel, CalendarioModel,
+    CategoriaMuebleModel, HistoricoMueblesModel
 )
 
 
@@ -58,6 +59,11 @@ class ShibbiShopApp(ctk.CTk):
         self.historico_model = HistoricoPreciosModel(self.db)
         self.factura_model = FacturaModel(self.db)
         self.calendario_model = CalendarioModel(self.db)
+        self.categoria_mueble_model = CategoriaMuebleModel(self.db)
+        self.historico_muebles_model = HistoricoMueblesModel(self.db)
+
+        # Populate historic from existing presupuestos (one-time migration)
+        self.historico_muebles_model.poblar_desde_existentes()
 
         # Current view reference
         self.current_view = None
@@ -100,6 +106,7 @@ class ShibbiShopApp(ctk.CTk):
             ("nuevo_presupuesto", "Nuevo Presupuesto"),
             ("presupuestos", "Presupuestos"),
             ("facturas", "Facturas"),
+            ("historico_muebles", "Histórico Muebles"),
             ("calendario", "Calendario"),
             ("clientes", "Clientes"),
             ("proveedores", "Proveedores"),
@@ -179,6 +186,9 @@ class ShibbiShopApp(ctk.CTk):
         elif view_name == "facturas":
             from app.ui.facturas import FacturasView
             self.current_view = FacturasView(self.content_frame, self)
+        elif view_name == "historico_muebles":
+            from app.ui.historico_muebles import HistoricoMueblesView
+            self.current_view = HistoricoMueblesView(self.content_frame, self)
         elif view_name == "calendario":
             from app.ui.calendario import CalendarioView
             self.current_view = CalendarioView(self.content_frame, self)
