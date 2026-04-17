@@ -82,27 +82,26 @@ class HistoricoMueblesView(ctk.CTkFrame):
         table_frame.grid_rowconfigure(0, weight=1)
 
         style = ttk.Style()
-        style.configure("Hist.Treeview", font=("Segoe UI", 16), rowheight=44)
+        style.configure("Hist.Treeview", font=("Segoe UI", 18), rowheight=48)
         style.configure("Hist.Treeview.Heading", font=("Segoe UI", 14, "bold"))
 
-        columns = ("categoria", "nombre", "descripcion", "cliente",
-                   "precio_ud", "cant", "fecha", "presupuesto")
+        columns = ("categoria", "nombre", "descripcion", "precio_ud",
+                   "cliente", "fecha", "presupuesto")
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings",
                                   style="Hist.Treeview")
 
         headings = [
-            ("categoria", "Categoría", 100),
-            ("nombre", "Nombre", 170),
-            ("descripcion", "Descripción", 170),
-            ("cliente", "Cliente", 150),
-            ("precio_ud", "Precio Ud.", 95),
-            ("cant", "Uds.", 50),
-            ("fecha", "Fecha", 90),
-            ("presupuesto", "Nº Presup.", 85),
+            ("categoria", "Categoría", 110),
+            ("nombre", "Nombre", 180),
+            ("descripcion", "Descripción", 200),
+            ("precio_ud", "Precio Ud.", 110),
+            ("cliente", "Cliente", 170),
+            ("fecha", "Fecha", 100),
+            ("presupuesto", "Nº Presup.", 100),
         ]
         for col, text, w in headings:
             self.tree.heading(col, text=text)
-            anchor = "e" if col in ("precio_ud", "cant") else "w"
+            anchor = "e" if col == "precio_ud" else "w"
             self.tree.column(col, width=w, minwidth=50, anchor=anchor)
 
         scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
@@ -152,9 +151,8 @@ class HistoricoMueblesView(ctk.CTkFrame):
                 r["categoria_nombre"] or "(Sin cat.)",
                 r["nombre"] or "",
                 r["descripcion"] or "",
-                r["cliente_nombre"] or "(Eliminado)",
                 f"{r['precio_unitario']:,.2f}€",
-                r["cantidad"] or 1,
+                r["cliente_nombre"] or "(Eliminado)",
                 fecha,
                 r["numero_presupuesto"] or "",
             ), iid=str(r["id"]),
