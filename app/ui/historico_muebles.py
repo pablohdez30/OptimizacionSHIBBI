@@ -85,7 +85,10 @@ class HistoricoMueblesView(ctk.CTkFrame):
         style.configure("Hist.Treeview", font=("Segoe UI", 18), rowheight=48,
                          background="#ffffff", fieldbackground="#ffffff")
         style.configure("Hist.Treeview.Heading", font=("Segoe UI", 14, "bold"),
-                         background="#e8e8e8")
+                         background="#1a1a2e", foreground="#ffffff",
+                         relief="flat")
+        style.map("Hist.Treeview.Heading",
+                  background=[("active", "#16213e")])
         style.map("Hist.Treeview",
                   background=[("selected", "#e94560")],
                   foreground=[("selected", "#ffffff")])
