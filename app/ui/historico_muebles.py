@@ -82,8 +82,13 @@ class HistoricoMueblesView(ctk.CTkFrame):
         table_frame.grid_rowconfigure(0, weight=1)
 
         style = ttk.Style()
-        style.configure("Hist.Treeview", font=("Segoe UI", 18), rowheight=48)
-        style.configure("Hist.Treeview.Heading", font=("Segoe UI", 14, "bold"))
+        style.configure("Hist.Treeview", font=("Segoe UI", 18), rowheight=48,
+                         background="#ffffff", fieldbackground="#ffffff")
+        style.configure("Hist.Treeview.Heading", font=("Segoe UI", 14, "bold"),
+                         background="#e8e8e8")
+        style.map("Hist.Treeview",
+                  background=[("selected", "#e94560")],
+                  foreground=[("selected", "#ffffff")])
 
         columns = ("categoria", "nombre", "descripcion", "precio_ud",
                    "cliente", "fecha", "presupuesto")
@@ -101,8 +106,11 @@ class HistoricoMueblesView(ctk.CTkFrame):
         ]
         for col, text, w in headings:
             self.tree.heading(col, text=text)
-            anchor = "e" if col == "precio_ud" else "w"
-            self.tree.column(col, width=w, minwidth=50, anchor=anchor)
+            self.tree.column(col, width=w, minwidth=50, anchor="w")
+
+        # Alternating row colors for readability
+        self.tree.tag_configure("odd", background="#f5f5f5")
+        self.tree.tag_configure("even", background="#ffffff")
 
         scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -141,22 +149,23 @@ class HistoricoMueblesView(ctk.CTkFrame):
             texto=texto)
 
         self.tree.delete(*self.tree.get_children())
-        for r in rows:
+        for i, r in enumerate(rows):
             from datetime import datetime
             try:
                 fecha = datetime.strptime(r["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y")
             except (ValueError, TypeError):
                 fecha = r["fecha"] or ""
+            row_tag = "odd" if i % 2 else "even"
             self.tree.insert("", "end", values=(
                 r["categoria_nombre"] or "(Sin cat.)",
                 r["nombre"] or "",
                 r["descripcion"] or "",
-                f"{r['precio_unitario']:,.2f}€",
+                f"{r['precio_unitario']:,.2f} €",
                 r["cliente_nombre"] or "(Eliminado)",
                 fecha,
                 r["numero_presupuesto"] or "",
             ), iid=str(r["id"]),
-               tags=(str(r["presupuesto_id"] or ""),))
+               tags=(row_tag, str(r["presupuesto_id"] or "")))
 
         self.status_label.configure(text=f"{len(rows)} registros")
 
@@ -165,9 +174,10 @@ class HistoricoMueblesView(ctk.CTkFrame):
         if not sel:
             return
         tags = self.tree.item(sel[0], "tags")
-        if tags and tags[0]:
+        # tags[0] = row color (odd/even), tags[1] = presupuesto_id
+        if tags and len(tags) > 1 and tags[1]:
             try:
-                pres_id = int(tags[0])
+                pres_id = int(tags[1])
                 self.app.show_nuevo_presupuesto(presupuesto_id=pres_id)
             except (ValueError, TypeError):
                 pass
