@@ -158,7 +158,7 @@ class HistoricoMueblesView(ctk.CTkFrame):
                 fecha,
                 r["numero_presupuesto"] or "",
             ), iid=str(r["id"]),
-               tags=(str(r.get("presupuesto_id", "")),))
+               tags=(str(r["presupuesto_id"] or ""),))
 
         self.status_label.configure(text=f"{len(rows)} registros")
 
