@@ -82,13 +82,15 @@ class HistoricoMueblesView(ctk.CTkFrame):
         table_frame.grid_rowconfigure(0, weight=1)
 
         style = ttk.Style()
+        style.theme_use("clam")
         style.configure("Hist.Treeview", font=("Segoe UI", 18), rowheight=48,
                          background="#ffffff", fieldbackground="#ffffff")
         style.configure("Hist.Treeview.Heading", font=("Segoe UI", 14, "bold"),
                          background="#1a1a2e", foreground="#ffffff",
-                         relief="flat")
+                         borderwidth=0, relief="flat")
         style.map("Hist.Treeview.Heading",
-                  background=[("active", "#16213e")])
+                  background=[("active", "#16213e")],
+                  foreground=[("active", "#ffffff")])
         style.map("Hist.Treeview",
                   background=[("selected", "#e94560")],
                   foreground=[("selected", "#ffffff")])
