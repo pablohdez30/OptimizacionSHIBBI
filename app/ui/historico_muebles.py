@@ -82,8 +82,8 @@ class HistoricoMueblesView(ctk.CTkFrame):
         table_frame.grid_rowconfigure(0, weight=1)
 
         style = ttk.Style()
-        style.configure("Hist.Treeview", font=("Segoe UI", 13), rowheight=36)
-        style.configure("Hist.Treeview.Heading", font=("Segoe UI", 12, "bold"))
+        style.configure("Hist.Treeview", font=("Segoe UI", 16), rowheight=44)
+        style.configure("Hist.Treeview.Heading", font=("Segoe UI", 14, "bold"))
 
         columns = ("categoria", "nombre", "descripcion", "cliente",
                    "precio_ud", "cant", "fecha", "presupuesto")
