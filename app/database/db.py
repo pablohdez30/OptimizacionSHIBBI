@@ -339,6 +339,7 @@ class Database:
             ("empresa_cif", "B-86423472", "CIF"),
             ("empresa_cuenta_bancaria", "ES09-0128-1016-8201-0001-6176", "Cuenta bancaria"),
             ("empresa_marca", "ShibbiShop", "Nombre comercial"),
+            ("empresa_google_reviews", "https://g.page/r/CY9gUGoXXmCcEBE/review", "Enlace de reseñas de Google"),
             ("condiciones_pago_default", "50% adelanto - 50% antes de la entrega del trabajo.", "Condiciones de pago"),
             ("dias_validez_default", "15", "Días de validez del presupuesto"),
             ("ruta_drive", "", "Ruta de Google Drive para auto-exportar"),

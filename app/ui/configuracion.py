@@ -67,6 +67,7 @@ class ConfiguracionView(ctk.CTkFrame):
             ("empresa_ciudad", "Ciudad / CP"),
             ("empresa_cif", "CIF"),
             ("empresa_cuenta_bancaria", "Cuenta bancaria"),
+            ("empresa_google_reviews", "Enlace Google Reviews"),
         ]
 
         for clave, label in empresa_items:

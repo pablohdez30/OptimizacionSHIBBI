@@ -1,5 +1,7 @@
 import customtkinter as ctk
 from tkinter import messagebox
+import webbrowser
+import urllib.parse
 
 
 class PresupuestosView(ctk.CTkFrame):
@@ -61,7 +63,7 @@ class PresupuestosView(ctk.CTkFrame):
         th = ctk.CTkFrame(table_frame, fg_color="#f8f9fa", corner_radius=0)
         th.pack(fill="x", padx=10, pady=(10, 2))
         cols = [("Nº", 80), ("Cliente", 170), ("Proyecto", 130), ("Fecha", 90),
-                ("Estado", 140), ("Total", 100), ("Acciones", 220)]
+                ("Estado", 140), ("Total", 100), ("Acciones", 280)]
         for text, width in cols:
             ctk.CTkLabel(th, text=text, width=width,
                          font=ctk.CTkFont(size=12, weight="bold"),
@@ -163,12 +165,21 @@ class PresupuestosView(ctk.CTkFrame):
                           command=lambda pid=p["id"]: self._eliminar(pid)
                           ).pack(side="left", padx=2)
 
-            # "Crear Factura" button for accepted presupuestos (after Eliminar)
+            # "Crear Factura" button for accepted presupuestos
             if p["estado"] == "Aceptado":
                 ctk.CTkButton(actions, text="Factura", width=60, height=26,
                               font=ctk.CTkFont(size=11),
                               fg_color="#0077b6", hover_color="#005f8a",
                               command=lambda pid=p["id"]: self._crear_factura(pid)
+                              ).pack(side="left", padx=2)
+
+            # "Pedir Reseña" button for delivered presupuestos
+            if p["estado"] == "Entregado":
+                ctk.CTkButton(actions, text="Reseña", width=55, height=26,
+                              font=ctk.CTkFont(size=11),
+                              fg_color="#e9c46a", hover_color="#d4a843",
+                              text_color="#1a1a2e",
+                              command=lambda pid=p["id"], cn=p["cliente_nombre"]: self._pedir_resena(pid, cn)
                               ).pack(side="left", padx=2)
 
     def _crear_factura(self, presupuesto_id):
@@ -186,6 +197,50 @@ class PresupuestosView(ctk.CTkFrame):
         if new_id:
             messagebox.showinfo("Duplicado", "Presupuesto duplicado correctamente.")
             self._cargar()
+
+    def _pedir_resena(self, presupuesto_id, cliente_nombre):
+        pres = self.app.presupuesto_model.obtener(presupuesto_id)
+        if not pres:
+            return
+
+        cliente = self.app.cliente_model.obtener(pres["cliente_id"])
+        if not cliente or not cliente["email"]:
+            messagebox.showwarning("Sin email",
+                f"El cliente '{cliente_nombre}' no tiene email configurado.\n"
+                "Añádelo en la ficha del cliente para poder enviar la reseña.")
+            return
+
+        google_url = self.app.config_model.obtener("empresa_google_reviews") or ""
+        marca = self.app.config_model.obtener("empresa_marca") or "ShibbiShop"
+
+        lineas = self.app.presupuesto_model.obtener_lineas(presupuesto_id)
+        nombres_muebles = ", ".join(l["nombre_producto"] for l in lineas if l["nombre_producto"])
+        if not nombres_muebles:
+            nombres_muebles = "tu mueble"
+
+        nombre_pila = cliente_nombre.split()[0] if cliente_nombre else "cliente"
+
+        asunto = f"Tu opinión nos importa - {marca}"
+        cuerpo = (
+            f"Hola {nombre_pila},\n\n"
+            f"Esperamos que estés disfrutando de {nombres_muebles}.\n\n"
+            f"Para nosotros tu opinión es muy importante. "
+            f"Si estás satisfecho con el trabajo, nos ayudaría mucho "
+            f"que nos dejases una valoración en Google:\n\n"
+            f"{google_url}\n\n"
+            f"¡Muchas gracias!\n"
+            f"El equipo de {marca}"
+        )
+
+        mailto = "mailto:{}?subject={}&body={}".format(
+            urllib.parse.quote(cliente["email"]),
+            urllib.parse.quote(asunto),
+            urllib.parse.quote(cuerpo))
+
+        try:
+            webbrowser.open(mailto)
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo abrir el cliente de email:\n{e}")
 
     def _eliminar(self, presupuesto_id):
         if messagebox.askyesno("Confirmar", "¿Eliminar este presupuesto? Esta acción no se puede deshacer."):
