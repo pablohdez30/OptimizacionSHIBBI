@@ -232,7 +232,7 @@ class PresupuestosView(ctk.CTkFrame):
             f"El equipo de {marca}"
         )
 
-        mailto = "mailto:{}?subject={}&body={}".format(
+        mailto = "https://mail.google.com/mail/?view=cm&to={}&su={}&body={}".format(
             urllib.parse.quote(cliente["email"]),
             urllib.parse.quote(asunto),
             urllib.parse.quote(cuerpo))
