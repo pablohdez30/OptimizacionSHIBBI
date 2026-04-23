@@ -139,6 +139,40 @@ export default function Icon({
           <path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18" />
         </svg>
       );
+    case "eye":
+      return (
+        <svg {...props}>
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      );
+    case "download":
+      return (
+        <svg {...props}>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <path d="m7 10 5 5 5-5M12 15V3" />
+        </svg>
+      );
+    case "invoice":
+      return (
+        <svg {...props}>
+          <path d="M16 3H8a2 2 0 0 0-2 2v16l3-2 3 2 3-2 3 2V5a2 2 0 0 0-2-2z" />
+          <path d="M9 8h6M9 12h6M9 16h3" />
+        </svg>
+      );
+    case "calendar":
+      return (
+        <svg {...props}>
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M3 10h18M8 3v4M16 3v4" />
+        </svg>
+      );
+    case "filter":
+      return (
+        <svg {...props}>
+          <path d="M22 3H2l8 9.46V19l4 2v-8.54z" />
+        </svg>
+      );
     case "file":
       return (
         <svg {...props}>

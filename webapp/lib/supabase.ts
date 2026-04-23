@@ -6,6 +6,9 @@ import type {
   Configuracion,
   CategoriaMaterial,
   CategoriaMueble,
+  Factura,
+  LineaFactura,
+  HistoricoMueble,
 } from "./types";
 
 const supabase = () => createClient();
@@ -122,6 +125,43 @@ export async function getMaterialesProveedor(proveedorId: number) {
   return data;
 }
 
+export async function crearMaterialProveedor(material: {
+  proveedor_id: number;
+  categoria_material_id: number;
+  descripcion_material: string;
+  precio: number;
+  unidad: string;
+  notas?: string;
+}) {
+  const { error } = await supabase()
+    .from("historico_precios_proveedor")
+    .insert({
+      ...material,
+      notas: material.notas || "",
+      fecha_precio: new Date().toISOString(),
+    });
+  if (error) throw error;
+}
+
+export async function actualizarMaterialProveedor(
+  id: number,
+  campos: Partial<HistoricoPrecioProveedor>
+) {
+  const { error } = await supabase()
+    .from("historico_precios_proveedor")
+    .update(campos)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function eliminarMaterialProveedor(id: number) {
+  const { error } = await supabase()
+    .from("historico_precios_proveedor")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
 // ============================================================
 // Configuración
 // ============================================================
@@ -210,6 +250,92 @@ export async function eliminarCategoriaMueble(id: number) {
     .delete()
     .eq("id", id);
   if (error) throw error;
+}
+
+// ============================================================
+// Facturas
+// ============================================================
+export async function getFacturas() {
+  const { data, error } = await supabase()
+    .from("facturas")
+    .select("*, clientes(nombre)")
+    .order("fecha", { ascending: false });
+  if (error) throw error;
+  return data as (Factura & { clientes: { nombre: string } | null })[];
+}
+
+export async function getFactura(id: number) {
+  const { data, error } = await supabase()
+    .from("facturas")
+    .select("*, clientes(nombre, direccion, nif_cif)")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getLineasFactura(facturaId: number) {
+  const { data, error } = await supabase()
+    .from("lineas_factura")
+    .select("*")
+    .eq("factura_id", facturaId)
+    .order("orden");
+  if (error) throw error;
+  return data as LineaFactura[];
+}
+
+export async function eliminarFactura(id: number) {
+  const { error } = await supabase().from("facturas").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function calcularTotalFactura(facturaId: number) {
+  const { data: factura } = await supabase()
+    .from("facturas")
+    .select("adelanto_importe")
+    .eq("id", facturaId)
+    .single();
+  const { data: lineas } = await supabase()
+    .from("lineas_factura")
+    .select("unidades,precio_unitario")
+    .eq("factura_id", facturaId);
+  if (!lineas) return 0;
+  const base = lineas.reduce(
+    (sum: number, l: any) => sum + l.unidades * l.precio_unitario,
+    0
+  );
+  return base - (factura?.adelanto_importe || 0);
+}
+
+// ============================================================
+// Histórico muebles
+// ============================================================
+export async function getHistoricoMuebles(filters?: {
+  categoriaId?: number | null;
+  clienteId?: number | null;
+  texto?: string;
+}) {
+  let q = supabase()
+    .from("historico_muebles")
+    .select(
+      "*, categorias_mueble(nombre), clientes(nombre), presupuestos(numero_presupuesto)"
+    );
+
+  if (filters?.categoriaId) {
+    q = q.eq("categoria_mueble_id", filters.categoriaId);
+  }
+  if (filters?.clienteId) {
+    q = q.eq("cliente_id", filters.clienteId);
+  }
+  if (filters?.texto) {
+    q = q.or(
+      `nombre.ilike.%${filters.texto}%,descripcion.ilike.%${filters.texto}%`
+    );
+  }
+
+  const { data, error } = await q.order("fecha", { ascending: false }).limit(500);
+  if (error) throw error;
+  return data;
 }
 
 export async function setConfigValue(
