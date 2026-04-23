@@ -388,7 +388,7 @@ export async function getPresupuestos(filtros?: {
   if (filtros?.estado) {
     q = q.eq("estado", filtros.estado);
   }
-  const { data, error } = await q.order("fecha", { ascending: false });
+  const { data, error } = await q.order("id", { ascending: false });
   if (error) throw error;
   return data as (Presupuesto & {
     clientes: { nombre: string; nif_cif: string } | null;
