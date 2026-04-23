@@ -135,25 +135,27 @@ export default function HistoricoMueblesPage() {
               Histórico de{" "}
               <span className="gold-grad">Muebles</span>
             </h1>
-            <p className="mt-3 text-[14px] text-text-muted max-w-[580px]">
-              Todas las piezas entregadas o en curso, agrupadas por categoría.
-              Úsalo para consultar precios de referencia, repetir fabricaciones
-              o crear presupuestos a partir de obra pasada.
-            </p>
-          </div>
-          <div className="flex gap-10 shrink-0">
-            <div>
-              <div className="mono text-[10px] tracking-[0.2em] text-text-muted mb-1">
-                TOTAL REGISTROS
-              </div>
-              <div className="text-[28px] font-semibold num">{rows.length}</div>
-            </div>
-            <div>
-              <div className="mono text-[10px] tracking-[0.2em] text-text-muted mb-1">
-                VALOR ACUMULADO
-              </div>
-              <div className="text-[28px] font-semibold text-gold num">
-                {fmtMoney(totalValor)}
+            <div className="mt-3 flex items-center gap-8">
+              <p className="text-[14px] text-text-muted max-w-[500px]">
+                Todas las piezas entregadas o en curso, agrupadas por categoría.
+              </p>
+              <div className="flex gap-8 shrink-0">
+                <div>
+                  <div className="mono text-[9px] tracking-[0.2em] text-text-muted">
+                    TOTAL REGISTROS
+                  </div>
+                  <div className="text-[22px] font-semibold num">
+                    {rows.length}
+                  </div>
+                </div>
+                <div>
+                  <div className="mono text-[9px] tracking-[0.2em] text-text-muted">
+                    VALOR ACUMULADO
+                  </div>
+                  <div className="text-[22px] font-semibold text-gold num">
+                    {fmtMoney(totalValor)}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -358,7 +360,7 @@ export default function HistoricoMueblesPage() {
                       {r.clientes?.nombre ? (
                         <div className="flex items-center gap-2">
                           <div
-                            className="h-6 w-6 rounded-full grid place-items-center text-[9px] font-bold shrink-0"
+                            className="h-6 w-6 rounded-lg grid place-items-center text-[9px] font-bold shrink-0"
                             style={{
                               background: colorFromName(r.clientes.nombre).bg,
                               color: colorFromName(r.clientes.nombre).fg,

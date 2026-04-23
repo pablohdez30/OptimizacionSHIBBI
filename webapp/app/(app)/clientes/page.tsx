@@ -56,7 +56,7 @@ function EditModal({
           <div className="flex items-center gap-3">
             {!isNew ? (
               <div
-                className="h-10 w-10 rounded-full grid place-items-center text-[12px] font-bold"
+                className="h-10 w-10 rounded-lg grid place-items-center text-[12px] font-bold"
                 style={{
                   background: colorFromName(form.nombre || "").bg,
                   color: colorFromName(form.nombre || "").fg,
@@ -407,7 +407,7 @@ export default function ClientesPage() {
                     <td className="pl-6 pr-3 py-3">
                       <div className="flex items-center gap-3">
                         <div
-                          className="h-8 w-8 rounded-full grid place-items-center text-[10px] font-bold shrink-0"
+                          className="h-8 w-8 rounded-lg grid place-items-center text-[10px] font-bold shrink-0"
                           style={{
                             background: colorFromName(c.nombre).bg,
                             color: colorFromName(c.nombre).fg,

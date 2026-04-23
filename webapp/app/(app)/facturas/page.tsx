@@ -346,6 +346,18 @@ export default function FacturasPage() {
     );
   }, [facturas, q]);
 
+  const toggleEstado = async (f: FacturaConTotal) => {
+    const newEstado = (f as any).estado === "Pagada" ? "Pendiente" : "Pagada";
+    const { createClient } = await import("@/utils/supabase/client");
+    const sb = createClient();
+    await sb.from("facturas").update({ estado: newEstado }).eq("id", f.id);
+    setFacturas((prev) =>
+      prev.map((fac) =>
+        fac.id === f.id ? { ...fac, estado: newEstado } as any : fac
+      )
+    );
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm("¿Eliminar esta factura? Esta acción no se puede deshacer."))
       return;
@@ -439,6 +451,9 @@ export default function FacturasPage() {
                 <th className="px-3 py-3.5 text-left mono text-[10px] tracking-[0.2em] text-text-muted font-medium w-[120px]">
                   FECHA
                 </th>
+                <th className="px-3 py-3.5 text-center mono text-[10px] tracking-[0.2em] text-text-muted font-medium w-[120px]">
+                  ESTADO
+                </th>
                 <th className="px-3 py-3.5 text-right mono text-[10px] tracking-[0.2em] text-text-muted font-medium w-[140px]">
                   TOTAL
                 </th>
@@ -450,13 +465,13 @@ export default function FacturasPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-text-muted">
+                  <td colSpan={7} className="text-center py-12 text-text-muted">
                     Cargando...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-text-muted">
+                  <td colSpan={7} className="text-center py-12 text-text-muted">
                     No se encontraron facturas.
                   </td>
                 </tr>
@@ -469,12 +484,12 @@ export default function FacturasPage() {
                     }`}
                   >
                     <td className="pl-6 pr-3 py-3 mono text-[13px] text-gold font-medium">
-                      FAC-{f.numero_factura}
+                      {f.numero_factura}
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
                         <div
-                          className="h-7 w-7 rounded-full grid place-items-center text-[10px] font-bold shrink-0"
+                          className="h-7 w-7 rounded-lg grid place-items-center text-[10px] font-bold shrink-0"
                           style={{
                             background: colorFromName(
                               f.clientes?.nombre || ""
@@ -494,6 +509,25 @@ export default function FacturasPage() {
                     </td>
                     <td className="px-3 py-3 text-[12px] text-text-muted num">
                       {parseFecha(f.fecha)}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <button
+                        onClick={() => toggleEstado(f)}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-semibold transition ${
+                          (f as any).estado === "Pagada"
+                            ? "bg-state-success/15 text-[#6FBF8E] border border-state-success/30"
+                            : "bg-[#E9C46A]/15 text-[#E9C46A] border border-[#E9C46A]/30"
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            (f as any).estado === "Pagada"
+                              ? "bg-[#6FBF8E]"
+                              : "bg-[#E9C46A]"
+                          }`}
+                        />
+                        {(f as any).estado || "Pendiente"}
+                      </button>
                     </td>
                     <td className="px-3 py-3 text-[13px] text-text font-semibold text-right num">
                       {fmtMoney(f.total_iva)}

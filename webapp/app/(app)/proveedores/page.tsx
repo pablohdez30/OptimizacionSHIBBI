@@ -600,7 +600,7 @@ export default function ProveedoresPage() {
                     <td className="pl-6 pr-3 py-3">
                       <div className="flex items-center gap-3">
                         <div
-                          className="h-8 w-8 rounded-full grid place-items-center text-[10px] font-bold shrink-0"
+                          className="h-8 w-8 rounded-lg grid place-items-center text-[10px] font-bold shrink-0"
                           style={{
                             background: colorFromName(p.nombre).bg,
                             color: colorFromName(p.nombre).fg,
