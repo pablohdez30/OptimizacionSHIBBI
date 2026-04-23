@@ -9,6 +9,8 @@ import type {
   Factura,
   LineaFactura,
   HistoricoMueble,
+  Presupuesto,
+  EventoCalendario,
 } from "./types";
 
 const supabase = () => createClient();
@@ -367,6 +369,128 @@ export async function actualizarHistoricoMueble(
 export async function eliminarHistoricoMueble(id: number) {
   const { error } = await supabase()
     .from("historico_muebles")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ============================================================
+// Presupuestos
+// ============================================================
+export async function getPresupuestos(filtros?: {
+  estado?: string | null;
+  texto?: string | null;
+}) {
+  let q = supabase()
+    .from("presupuestos")
+    .select("*, clientes(nombre, nif_cif)");
+
+  if (filtros?.estado) {
+    q = q.eq("estado", filtros.estado);
+  }
+  const { data, error } = await q.order("fecha", { ascending: false });
+  if (error) throw error;
+  return data as (Presupuesto & {
+    clientes: { nombre: string; nif_cif: string } | null;
+  })[];
+}
+
+export async function actualizarEstadoPresupuesto(id: number, estado: string) {
+  const now = new Date().toISOString().slice(0, 10);
+  const update: Record<string, string> = { estado };
+  if (estado === "Enviado") update.fecha_envio = now;
+  else if (estado === "Aceptado") update.fecha_aceptacion = now;
+  else if (estado === "Entregado") update.fecha_entrega_real = now;
+
+  const { error } = await supabase()
+    .from("presupuestos")
+    .update(update)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function eliminarPresupuesto(id: number) {
+  // Borrar detalles y líneas primero (por si acaso los CASCADE no están)
+  const { data: lineas } = await supabase()
+    .from("lineas_presupuesto")
+    .select("id")
+    .eq("presupuesto_id", id);
+  if (lineas) {
+    for (const l of lineas) {
+      await supabase()
+        .from("detalles_coste")
+        .delete()
+        .eq("linea_presupuesto_id", l.id);
+    }
+  }
+  await supabase().from("lineas_presupuesto").delete().eq("presupuesto_id", id);
+  await supabase()
+    .from("presupuestos")
+    .update({ presupuesto_padre_id: null })
+    .eq("presupuesto_padre_id", id);
+  const { error } = await supabase().from("presupuestos").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function getTotalPresupuesto(id: number) {
+  const { data } = await supabase()
+    .from("lineas_presupuesto")
+    .select("cantidad, precio_unitario_final")
+    .eq("presupuesto_id", id);
+  if (!data) return 0;
+  return data.reduce(
+    (s: number, l: any) => s + (l.cantidad || 0) * (l.precio_unitario_final || 0),
+    0
+  );
+}
+
+// ============================================================
+// Calendario
+// ============================================================
+export async function getEventosCalendario(year: number, month: number) {
+  const prefix = `${year}-${String(month).padStart(2, "0")}`;
+  const { data, error } = await supabase()
+    .from("eventos_calendario")
+    .select("*")
+    .like("fecha", `${prefix}%`)
+    .order("fecha");
+  if (error) throw error;
+  return data as EventoCalendario[];
+}
+
+export async function crearEventoCalendario(ev: {
+  fecha: string;
+  titulo: string;
+  descripcion?: string;
+  color?: string;
+  presupuesto_id?: number | null;
+}) {
+  const { error } = await supabase()
+    .from("eventos_calendario")
+    .insert({
+      fecha: ev.fecha,
+      titulo: ev.titulo,
+      descripcion: ev.descripcion || "",
+      color: ev.color || "#FAC51C",
+      presupuesto_id: ev.presupuesto_id || null,
+    });
+  if (error) throw error;
+}
+
+export async function actualizarEventoCalendario(
+  id: number,
+  campos: Partial<EventoCalendario>
+) {
+  const { error } = await supabase()
+    .from("eventos_calendario")
+    .update(campos)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function eliminarEventoCalendario(id: number) {
+  const { error } = await supabase()
+    .from("eventos_calendario")
     .delete()
     .eq("id", id);
   if (error) throw error;

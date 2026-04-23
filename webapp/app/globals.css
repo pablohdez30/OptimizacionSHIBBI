@@ -127,3 +127,11 @@ select.ss-input {
   box-shadow: 0 0 0 1px rgba(250, 197, 28, 0.2),
     0 8px 40px -12px rgba(250, 197, 28, 0.25);
 }
+
+.today-pulse {
+  animation: todayPulse 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes todayPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 197, 28, 0.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(250, 197, 28, 0); }
+}
