@@ -71,6 +71,21 @@ export async function eliminarCliente(id: number) {
   if (error) throw error;
 }
 
+// Devuelve un mapa cliente_id → número de presupuestos
+export async function contarPresupuestosPorCliente() {
+  const { data, error } = await supabase()
+    .from("presupuestos")
+    .select("cliente_id");
+  if (error) throw error;
+  const map: Record<number, number> = {};
+  (data || []).forEach((r: any) => {
+    if (r.cliente_id != null) {
+      map[r.cliente_id] = (map[r.cliente_id] || 0) + 1;
+    }
+  });
+  return map;
+}
+
 // ============================================================
 // Proveedores
 // ============================================================
