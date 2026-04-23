@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #080808;
+  --surface-1: #111111;
+  --surface-2: #1A1A1A;
+  --gold: #FAC51C;
+  --text: #F5F5F5;
+  --muted: #888888;
+  --border: #2A2A2A;
+  --success: #2D6A4F;
+  --danger: #E74C3C;
+  --info: #3498DB;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+}
+
+::selection {
+  background: #fac51c;
+  color: #080808;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #080808;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border-radius: 10px;
+  border: 2px solid #080808;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2a2a;
+}
+
+/* ---------- Custom form controls ---------- */
+.ss-check {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #0e0e0e;
+  border: 1px solid #2a2a2a;
+  border-radius: 5px;
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ss-check:hover {
+  border-color: #3a3a3a;
+}
+.ss-check:checked {
+  background: #fac51c;
+  border-color: #fac51c;
+}
+.ss-check:checked::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23080808' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='3 8 7 12 13 4'/></svg>")
+    center/contain no-repeat;
+}
+
+.ss-input {
+  background: #0e0e0e;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #f5f5f5;
+  padding: 10px 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ss-input:focus {
+  outline: none;
+  border-color: #fac51c;
+  box-shadow: 0 0 0 3px rgba(250, 197, 28, 0.12);
+}
+.ss-input::placeholder {
+  color: #555;
+}
+
+.mono {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.dashed-sep {
+  background-image: linear-gradient(to right, #2a2a2a 50%, transparent 50%);
+  background-size: 8px 1px;
+  background-repeat: repeat-x;
+  height: 1px;
+}
+
+.gold-grad {
+  background: linear-gradient(180deg, #ffe38a 0%, #fac51c 60%, #c18f00 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-gold {
+  box-shadow: 0 0 0 1px rgba(250, 197, 28, 0.2),
+    0 8px 40px -12px rgba(250, 197, 28, 0.25);
+}
