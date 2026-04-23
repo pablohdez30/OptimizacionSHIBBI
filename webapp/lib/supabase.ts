@@ -338,6 +338,25 @@ export async function getHistoricoMuebles(filters?: {
   return data;
 }
 
+export async function actualizarHistoricoMueble(
+  id: number,
+  campos: Partial<HistoricoMueble>
+) {
+  const { error } = await supabase()
+    .from("historico_muebles")
+    .update(campos)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function eliminarHistoricoMueble(id: number) {
+  const { error } = await supabase()
+    .from("historico_muebles")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
 export async function setConfigValue(
   clave: string,
   valor: string,

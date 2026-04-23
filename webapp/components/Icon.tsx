@@ -173,6 +173,53 @@ export default function Icon({
           <path d="M22 3H2l8 9.46V19l4 2v-8.54z" />
         </svg>
       );
+    case "external":
+      return (
+        <svg {...props}>
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+          <path d="M15 3h6v6M10 14 21 3" />
+        </svg>
+      );
+    case "clock":
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+      );
+    case "check-circle":
+      return (
+        <svg {...props}>
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <path d="m22 4-10 10-3-3" />
+        </svg>
+      );
+    case "package":
+      return (
+        <svg {...props}>
+          <path d="M16.5 9.4 7.5 4.21M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+          <path d="m3.27 6.96 8.73 5.05 8.73-5.05M12 22.08V12" />
+        </svg>
+      );
+    case "chevron-up":
+      return (
+        <svg {...props}>
+          <path d="m18 15-6-6-6 6" />
+        </svg>
+      );
+    case "chevron-down":
+      return (
+        <svg {...props}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      );
+    case "bell":
+      return (
+        <svg {...props}>
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        </svg>
+      );
     case "file":
       return (
         <svg {...props}>

@@ -261,8 +261,374 @@ function MaterialForm({
   );
 }
 
-// ---------- Materials Panel ----------
-function MaterialsPanel({
+// ---------- Proveedor Row (expandable) ----------
+function ProveedorRow({
+  p,
+  i,
+  isOpen,
+  mats,
+  numCats,
+  onToggle,
+  onEdit,
+  onDelete,
+  onMatsChanged,
+}: {
+  p: Proveedor;
+  i: number;
+  isOpen: boolean;
+  mats: any[];
+  numCats: number;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onMatsChanged: () => void;
+}) {
+  return (
+    <>
+      <tr
+        className={`group border-b border-surface-2 transition-colors ${
+          isOpen
+            ? "bg-surface-2"
+            : i % 2 === 1
+            ? "bg-[#141414]"
+            : "bg-surface-1"
+        } hover:bg-surface-2`}
+      >
+        <td className="pl-6 pr-3 py-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="h-10 w-10 rounded-lg grid place-items-center text-[12px] font-bold flex-shrink-0"
+              style={{
+                background: `${colorFromName(p.nombre).bg}20`,
+                border: `1px solid ${colorFromName(p.nombre).bg}50`,
+                color: colorFromName(p.nombre).bg,
+              }}
+            >
+              {initials(p.nombre)}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[14px] font-medium text-text truncate group-hover:text-gold transition-colors">
+                {p.nombre}
+              </div>
+              <div className="mt-0.5 mono text-[10px] text-[#555]">
+                {mats.length} materiales ·{" "}
+                <span className="text-text-muted">{numCats} categorías</span>
+              </div>
+            </div>
+          </div>
+        </td>
+        <td className="px-3 py-4">
+          {p.telefono ? (
+            <a
+              href={`tel:${p.telefono.replace(/\s/g, "")}`}
+              className="mono text-[12px] text-text hover:text-gold"
+            >
+              {p.telefono}
+            </a>
+          ) : (
+            <span className="text-[12px] text-text-muted">—</span>
+          )}
+        </td>
+        <td className="px-3 py-4">
+          {p.email ? (
+            <a
+              href={`mailto:${p.email}`}
+              className="text-[12px] text-text hover:text-gold truncate block max-w-[200px]"
+            >
+              {p.email}
+            </a>
+          ) : (
+            <span className="text-[12px] text-text-muted">—</span>
+          )}
+        </td>
+        <td className="px-3 py-4">
+          {p.direccion ? (
+            <div className="flex items-start gap-2 text-[12px] text-[#BBB] leading-snug max-w-[260px]">
+              <Icon
+                name="pin"
+                size={12}
+                className="text-[#555] mt-0.5 flex-shrink-0"
+              />
+              <span>{p.direccion}</span>
+            </div>
+          ) : (
+            <span className="text-[12px] text-text-muted">—</span>
+          )}
+        </td>
+        <td className="px-3 py-4">
+          <div className="text-[12px] text-text-muted italic leading-snug max-w-[220px]">
+            {p.notas || "—"}
+          </div>
+        </td>
+        <td className="pl-3 pr-6 py-4">
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={onToggle}
+              className={`h-8 px-3 rounded-[7px] text-[12px] flex items-center gap-1.5 transition font-medium ${
+                isOpen
+                  ? "bg-gold text-bg border border-gold"
+                  : "border border-gold/30 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold/60"
+              }`}
+            >
+              <Icon name="package" size={12} /> Ver materiales
+              <Icon name={isOpen ? "chevron-up" : "chevron-down"} size={12} />
+            </button>
+            <button
+              onClick={onEdit}
+              className="h-8 w-8 grid place-items-center rounded-[7px] border border-border text-text-muted hover:text-gold hover:border-gold/40 hover:bg-gold/5 transition"
+            >
+              <Icon name="edit" size={12} />
+            </button>
+            <button
+              onClick={onDelete}
+              className="h-8 w-8 grid place-items-center rounded-[7px] border border-border text-text-muted hover:text-[#F39C8E] hover:border-state-danger/40 hover:bg-state-danger/10 transition"
+            >
+              <Icon name="trash" size={13} />
+            </button>
+          </div>
+        </td>
+      </tr>
+      {isOpen && (
+        <tr className="bg-transparent">
+          <td colSpan={6} className="p-0">
+            <MaterialsInlinePanel
+              provId={p.id}
+              provName={p.nombre}
+              mats={mats}
+              onChanged={onMatsChanged}
+            />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+// ---------- Materials Inline Panel ----------
+function MaterialsInlinePanel({
+  provId,
+  provName,
+  mats,
+  onChanged,
+}: {
+  provId: number;
+  provName: string;
+  mats: any[];
+  onChanged: () => void;
+}) {
+  const [categorias, setCategorias] = useState<CategoriaMaterial[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    getCategoriasMaterial().then(setCategorias);
+  }, []);
+
+  const handleCreate = async (data: any) => {
+    await crearMaterialProveedor({ ...data, proveedor_id: provId });
+    setAdding(false);
+    onChanged();
+  };
+  const handleEdit = async (id: number, data: any) => {
+    await actualizarMaterialProveedor(id, data);
+    setEditingId(null);
+    onChanged();
+  };
+  const handleDelete = async (id: number) => {
+    if (!confirm("¿Eliminar este material?")) return;
+    await eliminarMaterialProveedor(id);
+    onChanged();
+  };
+
+  const avg =
+    mats.length > 0
+      ? mats.reduce((s, m) => s + m.precio, 0) / mats.length
+      : 0;
+  const latest = mats[0];
+  const totalCats = new Set(mats.map((m) => m.categoria_material_id)).size;
+
+  return (
+    <div className="bg-[#0A0A0A] border-b border-border px-10 py-6">
+      {/* header strip */}
+      <div className="flex items-center gap-5 mb-5 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-gold/10 border border-gold/25 grid place-items-center text-gold">
+            <Icon name="package" size={15} />
+          </div>
+          <div>
+            <div className="mono text-[10px] tracking-[0.2em] text-gold">
+              HISTÓRICO DE MATERIALES
+            </div>
+            <div className="text-[14px] font-semibold text-text leading-none mt-0.5">
+              {provName}
+            </div>
+          </div>
+        </div>
+        <div className="h-8 w-px bg-border" />
+        <div className="flex items-center gap-6 text-[12px]">
+          <div>
+            <div className="mono text-[9px] tracking-[0.18em] text-[#555]">
+              REFERENCIAS
+            </div>
+            <div className="num text-[15px] font-semibold text-text mt-0.5">
+              {mats.length}
+            </div>
+          </div>
+          <div>
+            <div className="mono text-[9px] tracking-[0.18em] text-[#555]">
+              CATEGORÍAS
+            </div>
+            <div className="num text-[15px] font-semibold text-text mt-0.5">
+              {totalCats}
+            </div>
+          </div>
+          <div>
+            <div className="mono text-[9px] tracking-[0.18em] text-[#555]">
+              PRECIO MEDIO
+            </div>
+            <div className="num text-[15px] font-semibold text-gold mt-0.5">
+              {avg.toFixed(2)} €
+            </div>
+          </div>
+          <div>
+            <div className="mono text-[9px] tracking-[0.18em] text-[#555]">
+              ÚLTIMA COMPRA
+            </div>
+            <div className="text-[13px] text-text mt-0.5">
+              {latest?.fecha_precio?.split("T")[0] || "—"}
+            </div>
+          </div>
+        </div>
+        <div className="flex-1" />
+        <button
+          onClick={() => {
+            setAdding(true);
+            setEditingId(null);
+          }}
+          className="h-9 px-3.5 rounded-lg border border-gold/30 bg-gold/10 text-gold text-[12px] font-medium hover:bg-gold/20 flex items-center gap-1.5"
+        >
+          <Icon name="plus" size={13} stroke={2.2} /> Añadir material
+        </button>
+      </div>
+
+      {/* add form */}
+      {adding && (
+        <div className="mb-3">
+          <MaterialForm
+            categorias={categorias}
+            onSave={handleCreate}
+            onCancel={() => setAdding(false)}
+          />
+        </div>
+      )}
+
+      {/* materials table */}
+      <div className="rounded-[10px] border border-surface-2 bg-surface-1 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-[#0E0E0E]">
+            <tr>
+              <th className="pl-5 pr-3 py-3 text-left mono text-[9px] tracking-[0.2em] text-text-muted font-medium">
+                MATERIAL
+              </th>
+              <th className="px-3 py-3 text-left mono text-[9px] tracking-[0.2em] text-text-muted font-medium w-[150px]">
+                CATEGORÍA
+              </th>
+              <th className="px-3 py-3 text-right mono text-[9px] tracking-[0.2em] text-text-muted font-medium w-[120px]">
+                PRECIO
+              </th>
+              <th className="px-3 py-3 text-left mono text-[9px] tracking-[0.2em] text-text-muted font-medium w-[70px]">
+                UNIDAD
+              </th>
+              <th className="px-3 py-3 text-left mono text-[9px] tracking-[0.2em] text-text-muted font-medium w-[120px]">
+                FECHA
+              </th>
+              <th className="pl-3 pr-5 py-3 text-right mono text-[9px] tracking-[0.2em] text-text-muted font-medium w-[90px]">
+                ACCIONES
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {mats.length === 0 && !adding ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-text-muted">
+                  Sin materiales. Añade el primero arriba.
+                </td>
+              </tr>
+            ) : (
+              mats.map((m, i) =>
+                editingId === m.id ? (
+                  <tr key={m.id}>
+                    <td colSpan={6} className="p-3">
+                      <MaterialForm
+                        initial={m}
+                        categorias={categorias}
+                        onSave={(d) => handleEdit(m.id, d)}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  <tr
+                    key={m.id}
+                    className={`border-t border-surface-2 hover:bg-surface-2 ${
+                      i % 2 === 1 ? "bg-[#0E0E0E]" : ""
+                    }`}
+                  >
+                    <td className="pl-5 pr-3 py-3.5">
+                      <span className="text-[13px] text-text">
+                        {m.descripcion_material}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3.5 text-[12px] text-text-muted">
+                      {m.categorias_material?.nombre || "—"}
+                    </td>
+                    <td className="px-3 py-3.5 text-right">
+                      <span className="num text-[14px] font-semibold text-text">
+                        {m.precio.toFixed(2)} €
+                      </span>
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <span className="mono text-[11px] text-text-muted">
+                        {m.unidad}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <span className="text-[12px] text-text-muted">
+                        {m.fecha_precio?.split("T")[0] || "—"}
+                      </span>
+                    </td>
+                    <td className="pl-3 pr-5 py-3.5">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingId(m.id);
+                            setAdding(false);
+                          }}
+                          className="h-7 w-7 grid place-items-center rounded-md text-text-muted hover:text-gold hover:bg-surface-2"
+                        >
+                          <Icon name="edit" size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(m.id)}
+                          className="h-7 w-7 grid place-items-center rounded-md text-text-muted hover:text-state-danger hover:bg-surface-2"
+                        >
+                          <Icon name="trash" size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Obsolete Materials Panel (kept for reference, not used) ----------
+function _MaterialsPanelObsolete({
   provId,
   provName,
   onClose,
@@ -467,12 +833,21 @@ export default function ProveedoresPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Partial<Proveedor> | null>(null);
-  const [viewingMats, setViewingMats] = useState<Proveedor | null>(null);
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [matsByProv, setMatsByProv] = useState<Record<number, any[]>>({});
 
   const load = async () => {
     setLoading(true);
     const data = await getProveedores();
     setProveedores(data);
+    // Cargar materiales en paralelo para contadores
+    const mats: Record<number, any[]> = {};
+    await Promise.all(
+      data.map(async (p) => {
+        mats[p.id] = (await getMaterialesProveedor(p.id)) || [];
+      })
+    );
+    setMatsByProv(mats);
     setLoading(false);
   };
 
@@ -514,15 +889,21 @@ export default function ProveedoresPage() {
           <div>
             <div className="mono text-[10px] tracking-[0.2em] text-gold mb-3 flex items-center gap-2">
               <span className="h-1 w-1 rounded-full bg-gold" />
-              GESTIÓN · PROVEEDORES
+              CADENA DE SUMINISTRO
             </div>
             <h1 className="text-[44px] leading-[1.05] font-semibold tracking-[-0.025em]">
               Proveedores
             </h1>
             <p className="mt-3 text-[14px] text-text-muted">
-              <span className="text-text num">
+              <span className="text-text num font-medium">
                 {proveedores.length} proveedores
-              </span>
+              </span>{" "}
+              ·{" "}
+              <span className="text-text num font-medium">
+                {Object.values(matsByProv).reduce((s, ms) => s + ms.length, 0)}{" "}
+                materiales
+              </span>{" "}
+              en histórico
             </p>
           </div>
           <button
@@ -590,67 +971,27 @@ export default function ProveedoresPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((p, i) => (
-                  <tr
-                    key={p.id}
-                    className={`border-b border-border/50 hover:bg-surface-2/50 transition-colors ${
-                      i % 2 === 0 ? "bg-surface-1" : "bg-[#0D0D0D]"
-                    }`}
-                  >
-                    <td className="pl-6 pr-3 py-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="h-8 w-8 rounded-lg grid place-items-center text-[10px] font-bold shrink-0"
-                          style={{
-                            background: colorFromName(p.nombre).bg,
-                            color: colorFromName(p.nombre).fg,
-                          }}
-                        >
-                          {initials(p.nombre)}
-                        </div>
-                        <span className="text-[13px] font-medium text-text">
-                          {p.nombre}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-[12px] text-text-muted">
-                      {p.telefono || "—"}
-                    </td>
-                    <td className="px-3 py-3 text-[12px] text-text-muted">
-                      {p.email || "—"}
-                    </td>
-                    <td className="px-3 py-3 text-[12px] text-text-muted truncate max-w-[180px]">
-                      {p.direccion || "—"}
-                    </td>
-                    <td className="px-3 py-3 text-[12px] text-text-muted truncate max-w-[150px]">
-                      {p.notas || "—"}
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setViewingMats(p)}
-                          className="h-8 px-3 rounded-lg bg-gold/10 border border-gold/30 text-gold text-[12px] font-medium hover:bg-gold/20 flex items-center gap-1.5"
-                        >
-                          <Icon name="archive" size={12} /> Ver materiales
-                        </button>
-                        <button
-                          onClick={() => setEditing(p)}
-                          title="Editar"
-                          className="h-8 w-8 grid place-items-center rounded-md text-text-muted hover:text-gold hover:bg-surface-2"
-                        >
-                          <Icon name="edit" size={13} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(p.id)}
-                          title="Eliminar"
-                          className="h-8 w-8 grid place-items-center rounded-md text-text-muted hover:text-state-danger hover:bg-surface-2"
-                        >
-                          <Icon name="trash" size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filtered.map((p, i) => {
+                  const isOpen = expanded === p.id;
+                  const mats = matsByProv[p.id] || [];
+                  const numCats = new Set(
+                    mats.map((m) => m.categoria_material_id)
+                  ).size;
+                  return (
+                    <ProveedorRow
+                      key={p.id}
+                      p={p}
+                      i={i}
+                      isOpen={isOpen}
+                      mats={mats}
+                      numCats={numCats}
+                      onToggle={() => setExpanded(isOpen ? null : p.id)}
+                      onEdit={() => setEditing(p)}
+                      onDelete={() => handleDelete(p.id)}
+                      onMatsChanged={load}
+                    />
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -662,13 +1003,6 @@ export default function ProveedoresPage() {
           prov={editing}
           onClose={() => setEditing(null)}
           onSave={handleSave}
-        />
-      )}
-      {viewingMats && (
-        <MaterialsPanel
-          provId={viewingMats.id}
-          provName={viewingMats.nombre}
-          onClose={() => setViewingMats(null)}
         />
       )}
     </div>
