@@ -97,6 +97,62 @@ export default function Icon({
           <path d="m9 6 6 6-6 6" />
         </svg>
       );
+    case "euro":
+      return (
+        <svg {...props}>
+          <path d="M4 10h12M4 14h9" />
+          <path d="M19 6.5A6 6 0 0 0 9 12a6 6 0 0 0 10 5.5" />
+        </svg>
+      );
+    case "building":
+      return (
+        <svg {...props}>
+          <rect x="4" y="3" width="16" height="18" rx="2" />
+          <path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2" />
+          <path d="M10 21v-4h4v4" />
+        </svg>
+      );
+    case "tag":
+      return (
+        <svg {...props}>
+          <path d="M20.59 13.41 12 22 3 13V3h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "archive":
+      return (
+        <svg {...props}>
+          <rect x="3" y="3" width="18" height="5" rx="1" />
+          <path d="M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" />
+          <path d="M10 12h4" />
+        </svg>
+      );
+    case "folder":
+      return (
+        <svg {...props}>
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+      );
+    case "hash":
+      return (
+        <svg {...props}>
+          <path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18" />
+        </svg>
+      );
+    case "file":
+      return (
+        <svg {...props}>
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+          <path d="M14 3v5h5" />
+        </svg>
+      );
+    case "settings":
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+        </svg>
+      );
     default:
       return null;
   }

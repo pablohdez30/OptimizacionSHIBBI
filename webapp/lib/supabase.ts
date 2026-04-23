@@ -4,6 +4,8 @@ import type {
   Proveedor,
   HistoricoPrecioProveedor,
   Configuracion,
+  CategoriaMaterial,
+  CategoriaMueble,
 } from "./types";
 
 const supabase = () => createClient();
@@ -140,6 +142,74 @@ export async function getConfigValue(clave: string) {
     .single();
   if (error) return null;
   return data?.valor ?? null;
+}
+
+// ============================================================
+// Categorías de material
+// ============================================================
+export async function getCategoriasMaterial() {
+  const { data, error } = await supabase()
+    .from("categorias_material")
+    .select("*")
+    .order("orden");
+  if (error) throw error;
+  return data as CategoriaMaterial[];
+}
+
+export async function crearCategoriaMaterial(nombre: string) {
+  const { data: maxRow } = await supabase()
+    .from("categorias_material")
+    .select("orden")
+    .order("orden", { ascending: false })
+    .limit(1)
+    .single();
+  const orden = (maxRow?.orden || 0) + 1;
+  const { error } = await supabase()
+    .from("categorias_material")
+    .insert({ nombre, orden, es_personalizada: 1 });
+  if (error) throw error;
+}
+
+export async function eliminarCategoriaMaterial(id: number) {
+  const { error } = await supabase()
+    .from("categorias_material")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ============================================================
+// Categorías de mueble
+// ============================================================
+export async function getCategoriasMueble() {
+  const { data, error } = await supabase()
+    .from("categorias_mueble")
+    .select("*")
+    .order("orden");
+  if (error) throw error;
+  return data as CategoriaMueble[];
+}
+
+export async function crearCategoriaMueble(nombre: string) {
+  const { data: maxRow } = await supabase()
+    .from("categorias_mueble")
+    .select("orden")
+    .order("orden", { ascending: false })
+    .limit(1)
+    .single();
+  const orden = (maxRow?.orden || 0) + 1;
+  const { error } = await supabase()
+    .from("categorias_mueble")
+    .insert({ nombre, orden, es_personalizada: 1 });
+  if (error) throw error;
+}
+
+export async function eliminarCategoriaMueble(id: number) {
+  const { error } = await supabase()
+    .from("categorias_mueble")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function setConfigValue(
