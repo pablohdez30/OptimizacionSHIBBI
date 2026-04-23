@@ -14,16 +14,7 @@ import {
   getCategoriasMaterial,
 } from "@/lib/supabase";
 import type { Proveedor, CategoriaMaterial } from "@/lib/types";
-
-function initials(name: string) {
-  return name
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
+import { colorFromName, initials } from "@/lib/avatar";
 
 // ---------- Edit Proveedor Modal ----------
 function EditModal({
@@ -608,7 +599,13 @@ export default function ProveedoresPage() {
                   >
                     <td className="pl-6 pr-3 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-gold to-gold-dark text-bg grid place-items-center text-[10px] font-bold shrink-0">
+                        <div
+                          className="h-8 w-8 rounded-full grid place-items-center text-[10px] font-bold shrink-0"
+                          style={{
+                            background: colorFromName(p.nombre).bg,
+                            color: colorFromName(p.nombre).fg,
+                          }}
+                        >
                           {initials(p.nombre)}
                         </div>
                         <span className="text-[13px] font-medium text-text">

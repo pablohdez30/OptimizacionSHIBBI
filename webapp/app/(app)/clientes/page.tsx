@@ -9,16 +9,7 @@ import {
   eliminarCliente,
 } from "@/lib/supabase";
 import type { Cliente } from "@/lib/types";
-
-function initials(name: string) {
-  return name
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
+import { colorFromName, initials } from "@/lib/avatar";
 
 // ---------- Edit Modal ----------
 function EditModal({
@@ -64,7 +55,13 @@ function EditModal({
         <div className="relative flex items-center justify-between px-6 py-4 border-b border-surface-2">
           <div className="flex items-center gap-3">
             {!isNew ? (
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gold to-gold-dark text-bg grid place-items-center text-[12px] font-bold">
+              <div
+                className="h-10 w-10 rounded-full grid place-items-center text-[12px] font-bold"
+                style={{
+                  background: colorFromName(form.nombre || "").bg,
+                  color: colorFromName(form.nombre || "").fg,
+                }}
+              >
                 {initials(form.nombre || "—")}
               </div>
             ) : (
@@ -409,7 +406,13 @@ export default function ClientesPage() {
                   >
                     <td className="pl-6 pr-3 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-gold to-gold-dark text-bg grid place-items-center text-[10px] font-bold shrink-0">
+                        <div
+                          className="h-8 w-8 rounded-full grid place-items-center text-[10px] font-bold shrink-0"
+                          style={{
+                            background: colorFromName(c.nombre).bg,
+                            color: colorFromName(c.nombre).fg,
+                          }}
+                        >
                           {initials(c.nombre)}
                         </div>
                         <span className="text-[13px] font-medium text-text">
