@@ -104,7 +104,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-[220px] shrink-0 bg-surface-1 border-r border-border flex flex-col">
+    <aside className="w-[220px] shrink-0 h-screen bg-surface-1 border-r border-border flex flex-col overflow-y-auto">
       <div className="px-6 pt-7 pb-4">
         <div className="text-[20px] font-bold tracking-tight gold-grad">
           SHIBBISHOP
