@@ -17,6 +17,7 @@ import {
 import type { Cliente, LineaFactura } from "@/lib/types";
 import { exportFactura } from "@/lib/export";
 import ExportResultModal from "@/components/ExportResultModal";
+import { toast } from "sonner";
 
 function fmt(n: number) {
   return (
@@ -193,7 +194,7 @@ export default function EditorFacturaPage() {
 
   const handleSave = async () => {
     if (!info.cliente_id) {
-      alert("Selecciona un cliente");
+      toast.info("Selecciona un cliente");
       return;
     }
     if (!confirmarEdicion()) return;
@@ -236,7 +237,9 @@ export default function EditorFacturaPage() {
       setDirty(false);
       await load();
     } catch (e) {
-      alert("Error al guardar: " + (e as Error).message);
+      toast.error("Error al guardar la factura", {
+        description: (e as Error).message,
+      });
     }
     setSaving(false);
   };

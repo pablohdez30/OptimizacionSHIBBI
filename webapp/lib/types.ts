@@ -49,7 +49,8 @@ export type Presupuesto = {
   notas_internas: string;
   condiciones_pago: string;
   dias_validez: number;
-  incluye_instalacion: number;
+  incluye_instalacion: number; // checkbox "Porte" (0/1)
+  porte_importe: number;       // importe del porte (€, sin margen)
   fecha_envio: string | null;
   fecha_aceptacion: string | null;
   fecha_entrega_estimada: string | null;

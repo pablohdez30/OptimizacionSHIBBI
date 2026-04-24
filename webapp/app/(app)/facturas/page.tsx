@@ -16,6 +16,7 @@ import {
 import { exportFactura } from "@/lib/export";
 import BatchExportModal from "@/components/BatchExportModal";
 import ExportResultModal from "@/components/ExportResultModal";
+import { toast } from "sonner";
 import type { Factura, LineaFactura } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
 
@@ -366,7 +367,9 @@ function NuevaFacturaModal({
       const fac = await crearFacturaDesdePresupuesto(p.id);
       onCreated(fac.id);
     } catch (e) {
-      alert("No se pudo crear la factura:\n" + (e as Error).message);
+      toast.error("No se pudo crear la factura", {
+        description: (e as Error).message,
+      });
       setCreating(null);
     }
   };

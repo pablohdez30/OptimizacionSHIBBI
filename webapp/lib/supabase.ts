@@ -437,41 +437,30 @@ export async function crearFacturaDesdePresupuesto(presupuestoId: number) {
   const lineas = await getLineasPresupuesto(presupuestoId);
   let orden = 0;
   for (const linea of lineas) {
-    const detalles = await getDetallesCoste(linea.id);
-
-    // Suma los costes con categoría "Envío/Porte" para extraerlos como línea aparte
-    const porteCoste = detalles
-      .filter((d: any) => d.categorias_material?.nombre === "Envío/Porte")
-      .reduce((s: number, d: any) => s + (d.precio_total || 0), 0);
-
-    let precioProducto = linea.precio_unitario_final || 0;
-    if (porteCoste > 0) {
-      const margen = linea.margen_porcentaje || 0;
-      const porteConMargen = porteCoste * (1 + margen / 100);
-      precioProducto = precioProducto - porteConMargen;
-    }
-
     await supabase().from("lineas_factura").insert({
       factura_id: fac.id,
       concepto: linea.nombre_producto,
       descripcion: linea.descripcion || "",
       unidades: linea.cantidad,
-      precio_unitario: Math.round(precioProducto * 100) / 100,
+      precio_unitario:
+        Math.round((linea.precio_unitario_final || 0) * 100) / 100,
       es_porte: 0,
       orden: orden++,
     });
+  }
 
-    if (porteCoste > 0) {
-      await supabase().from("lineas_factura").insert({
-        factura_id: fac.id,
-        concepto: `Porte - ${linea.nombre_producto}`,
-        descripcion: "",
-        unidades: 1,
-        precio_unitario: Math.round(porteCoste * 100) / 100,
-        es_porte: 1,
-        orden: orden++,
-      });
-    }
+  // Porte unificado: si está marcado en el presupuesto, va como línea aparte
+  const porteImporte = (pres as any).porte_importe || 0;
+  if ((pres as any).incluye_instalacion && porteImporte > 0) {
+    await supabase().from("lineas_factura").insert({
+      factura_id: fac.id,
+      concepto: "Porte / Instalación",
+      descripcion: "",
+      unidades: 1,
+      precio_unitario: Math.round(porteImporte * 100) / 100,
+      es_porte: 1,
+      orden: orden++,
+    });
   }
 
   return fac as Factura;
@@ -669,6 +658,7 @@ export async function crearPresupuesto(args: {
   notas_internas?: string;
   condiciones_pago?: string;
   incluye_instalacion?: boolean;
+  porte_importe?: number;
   dias_validez?: number;
   numero_presupuesto?: string;
 }) {
@@ -698,6 +688,7 @@ export async function crearPresupuesto(args: {
       condiciones_pago: condiciones,
       dias_validez: dias,
       incluye_instalacion: args.incluye_instalacion ? 1 : 0,
+      porte_importe: args.porte_importe ?? 0,
     })
     .select()
     .single();

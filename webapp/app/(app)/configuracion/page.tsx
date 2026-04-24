@@ -20,6 +20,7 @@ import {
   saveDirHandle,
   verifyPermission,
 } from "@/lib/dirHandle";
+import { toast } from "sonner";
 
 type ConfigMap = Record<string, string>;
 
@@ -219,9 +220,9 @@ export default function ConfiguracionPage() {
 
   const pickExportDir = async () => {
     if (!isFileSystemAccessSupported()) {
-      alert(
-        "Tu navegador no soporta la API de carpetas. Usa Chrome, Edge u Opera."
-      );
+      toast.error("Navegador no compatible", {
+        description: "Usa Chrome, Edge u Opera para elegir carpeta.",
+      });
       return;
     }
     try {
@@ -231,15 +232,20 @@ export default function ConfiguracionPage() {
       })) as FileSystemDirectoryHandle;
       const ok = await verifyPermission(handle, true);
       if (!ok) {
-        alert("No se concedió permiso de escritura sobre esa carpeta.");
+        toast.error("Permiso denegado", {
+          description: "No se concedió permiso de escritura sobre esa carpeta.",
+        });
         return;
       }
       await saveDirHandle(handle);
       setDirName(handle.name);
+      toast.success("Carpeta configurada", { description: handle.name });
     } catch (e) {
       // El usuario canceló el diálogo → no es un error
       if ((e as DOMException)?.name === "AbortError") return;
-      alert("Error seleccionando carpeta: " + (e as Error).message);
+      toast.error("Error seleccionando carpeta", {
+        description: (e as Error).message,
+      });
     }
   };
 

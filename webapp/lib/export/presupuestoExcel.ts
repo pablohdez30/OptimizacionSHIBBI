@@ -1,10 +1,5 @@
 import ExcelJS from "exceljs";
-import {
-  ConfigMap,
-  PresupuestoCarga,
-  fetchAsset,
-  textoPorteInstalacion,
-} from "./utils";
+import { ConfigMap, PresupuestoCarga, fetchAsset } from "./utils";
 
 // Carga PresupuestoPlantilla.xlsx desde /public, rellena los campos y devuelve blob.
 // Replica la disposición exacta de excel_template.py (celdas, fonts, formato).
@@ -113,9 +108,23 @@ export async function generarExcelPresupuesto(
     }
   }
 
-  // Porte / Instalación
-  ws.getCell(18, 1).value = textoPorteInstalacion(pres);
-  ws.getCell(18, 1).font = boldFont as any;
+  // Línea de Porte / Instalación (si aplica) o nota informativa
+  if (pres.incluye_instalacion) {
+    ws.getCell(17, 1).value = "Porte / Instalación";
+    ws.getCell(17, 1).font = boldFont as any;
+    ws.getCell(17, 5).value = 1;
+    ws.getCell(17, 5).font = normalFont as any;
+    ws.getCell(17, 6).value = pres.porte_importe;
+    ws.getCell(17, 6).font = normalFont as any;
+    ws.getCell(17, 6).numFmt = moneyFmt;
+    ws.getCell(17, 7).value = pres.porte_importe;
+    ws.getCell(17, 7).font = normalFont as any;
+    ws.getCell(17, 7).numFmt = moneyFmt;
+    totalBase += pres.porte_importe;
+  } else {
+    ws.getCell(18, 1).value = "Porte / Instalación no incluido";
+    ws.getCell(18, 1).font = boldFont as any;
+  }
 
   // Totales
   const iva = totalBase * (iva_pct / 100);

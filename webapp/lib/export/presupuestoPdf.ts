@@ -5,7 +5,6 @@ import {
   fechaEs,
   fetchAsset,
   fmtNum,
-  textoPorteInstalacion,
 } from "./utils";
 
 // A4 medidas en mm: 210 x 297. Todo el módulo trabaja en mm.
@@ -164,15 +163,34 @@ export async function generarPdfPresupuesto(
     y += 2;
   }
 
-  // Empuja hacia abajo antes de "Porte..."
-  y += 8;
-  if (y > 240) {
-    doc.addPage();
-    y = MARGIN_T + 10;
+  // --- Línea de Porte/Instalación (si aplica) ---
+  if (pres.incluye_instalacion) {
+    if (y > 250) {
+      doc.addPage();
+      y = MARGIN_T + 10;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.text("Porte / Instalación", xConcepto, y);
+    doc.text("1", xUnidades + COL_UNIDADES, y, { align: "right" });
+    doc.text(fmtNum(pres.porte_importe), xPX + COL_PX, y, { align: "right" });
+    doc.text(fmtNum(pres.porte_importe), xTotal + COL_TOTAL, y, {
+      align: "right",
+    });
+    totalBase += pres.porte_importe;
+    y += 7;
+  } else {
+    // Nota informativa: porte no incluido (sin línea de precio)
+    y += 4;
+    if (y > 265) {
+      doc.addPage();
+      y = MARGIN_T + 10;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.text("Porte / Instalación no incluido", MARGIN_L, y);
+    y += 6;
   }
-  doc.setFont("helvetica", "bold");
-  doc.text(textoPorteInstalacion(pres), MARGIN_L, y);
-  y += 10;
+
+  y += 4;
 
   // --- Caja de totales (alineada a la derecha) ---
   const iva = totalBase * (iva_pct / 100);

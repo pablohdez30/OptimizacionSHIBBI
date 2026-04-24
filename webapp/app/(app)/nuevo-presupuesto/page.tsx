@@ -25,6 +25,7 @@ import {
 } from "@/lib/supabase";
 import { exportPresupuesto } from "@/lib/export";
 import ExportResultModal from "@/components/ExportResultModal";
+import { toast } from "sonner";
 import type {
   Cliente,
   Proveedor,
@@ -68,7 +69,8 @@ type Draft = {
     cliente_id: string;
     fecha: string;
     proyecto: string;
-    instalacion: boolean;
+    porte: boolean;
+    porteImporte: string;
     condiciones: string;
     notas: string;
   };
@@ -217,12 +219,12 @@ function SelectBox<T extends { value: string | number; label: string }>({
   const ts = size === "sm" ? "text-[12px]" : "text-[13px]";
   return (
     <div
-      className={`ss-input-wrap relative flex items-center ${h} rounded-[8px] bg-[#0E0E0E] border border-border pl-3 pr-8 transition cursor-pointer hover:border-[#3a3a3a]`}
+      className={`ss-input-wrap relative flex items-center ${h} rounded-[8px] bg-[#0E0E0E] border border-border transition hover:border-[#3a3a3a]`}
     >
       <select
         value={value === null || value === undefined ? "" : String(value)}
         onChange={(e) => onChange(e.target.value)}
-        className={`appearance-none flex-1 min-w-0 bg-transparent outline-none ${ts} text-text cursor-pointer pr-1`}
+        className={`appearance-none flex-1 min-w-0 h-full bg-transparent outline-none ${ts} text-text cursor-pointer pl-3 pr-8`}
       >
         {placeholder && (
           <option value="" className="bg-surface-1">
@@ -508,11 +510,13 @@ function FurnitureCard({
             />
           </div>
           <div className="col-span-5">
-            <Label>Descripción</Label>
-            <TextInput
+            <Label hint="Enter para varias líneas">Descripción</Label>
+            <textarea
               value={f.desc}
-              onChange={(v) => onChange({ ...f, desc: v })}
-              placeholder="Medidas, acabados, observaciones…"
+              onChange={(e) => onChange({ ...f, desc: e.target.value })}
+              placeholder="Medidas: 120x100&#10;Acabado: lacado mate&#10;Material: roble"
+              rows={3}
+              className="ss-input-wrap w-full rounded-[8px] bg-[#0E0E0E] border border-border px-3 py-2 text-[13px] text-text placeholder:text-[#555] outline-none transition focus:border-gold focus:ring-2 focus:ring-gold/20 resize-y leading-relaxed"
             />
           </div>
           <div className="col-span-2">
@@ -653,7 +657,9 @@ function NuevoClienteModal({
       onCreated(c);
       onClose();
     } catch (e) {
-      alert("Error al crear cliente: " + (e as Error).message);
+      toast.error("No se pudo crear el cliente", {
+        description: (e as Error).message,
+      });
     }
     setSaving(false);
   };
@@ -730,7 +736,8 @@ function NuevoPresupuestoEditor() {
     cliente_id: "",
     fecha: new Date().toISOString().slice(0, 10),
     proyecto: "",
-    instalacion: false,
+    porte: false,
+    porteImporte: "0",
     condiciones: PAYMENT_TERMS[0],
     notas: "",
   });
@@ -803,7 +810,8 @@ function NuevoPresupuestoEditor() {
             cliente_id: String(pres.cliente_id),
             fecha: pres.fecha,
             proyecto: pres.proyecto || "",
-            instalacion: !!pres.incluye_instalacion,
+            porte: !!pres.incluye_instalacion,
+            porteImporte: String(pres.porte_importe ?? 0),
             condiciones: pres.condiciones_pago || PAYMENT_TERMS[0],
             notas: pres.notas_internas || "",
           });
@@ -891,7 +899,9 @@ function NuevoPresupuestoEditor() {
           setFurniture([defaultMueble]);
         }
       } catch (e) {
-        alert("Error al cargar datos: " + (e as Error).message);
+        toast.error("Error al cargar datos", {
+          description: (e as Error).message,
+        });
       }
       setLoading(false);
     })();
@@ -935,9 +945,11 @@ function NuevoPresupuestoEditor() {
       );
       base += client * qty;
     });
+    const porte = general.porte ? parseNum(general.porteImporte) : 0;
+    base += porte;
     const iva = base * (ivaPct / 100);
-    return { base, iva, total: base + iva };
-  }, [furniture, ivaPct]);
+    return { base, iva, porte, total: base + iva };
+  }, [furniture, ivaPct, general.porte, general.porteImporte]);
 
   /* --------- Handlers mueble --------- */
   const updateFurniture = (uidF: string, newF: Furniture) => {
@@ -989,7 +1001,8 @@ function NuevoPresupuestoEditor() {
       cliente_id: clientes[0] ? String(clientes[0].id) : "",
       fecha: new Date().toISOString().slice(0, 10),
       proyecto: "",
-      instalacion: false,
+      porte: false,
+      porteImporte: "0",
       condiciones: PAYMENT_TERMS[0],
       notas: "",
     });
@@ -1020,11 +1033,11 @@ function NuevoPresupuestoEditor() {
   /* --------- Guardar --------- */
   const guardar = async (): Promise<number | null> => {
     if (!general.cliente_id) {
-      alert("Selecciona un cliente válido.");
+      toast.info("Selecciona un cliente válido.");
       return null;
     }
     if (furniture.length === 0) {
-      alert("Añade al menos un mueble / producto.");
+      toast.info("Añade al menos un mueble / producto.");
       return null;
     }
 
@@ -1044,6 +1057,8 @@ function NuevoPresupuestoEditor() {
       const catMueMap: Record<string, number> = {};
       catsMueble.forEach((c) => (catMueMap[c.nombre] = c.id));
 
+      const porteImporte = general.porte ? parseNum(general.porteImporte) : 0;
+
       let pid: number;
       if (presupuestoId) {
         // Update: cambiar campos y borrar líneas para reinsertarlas
@@ -1051,7 +1066,8 @@ function NuevoPresupuestoEditor() {
           cliente_id: parseInt(general.cliente_id, 10),
           proyecto: general.proyecto,
           notas_internas: general.notas,
-          incluye_instalacion: general.instalacion ? 1 : 0,
+          incluye_instalacion: general.porte ? 1 : 0,
+          porte_importe: porteImporte,
           condiciones_pago: general.condiciones,
           fecha: general.fecha,
         };
@@ -1066,7 +1082,8 @@ function NuevoPresupuestoEditor() {
           fecha: general.fecha,
           notas_internas: general.notas,
           condiciones_pago: general.condiciones,
-          incluye_instalacion: general.instalacion,
+          incluye_instalacion: general.porte,
+          porte_importe: porteImporte,
           numero_presupuesto: numero.trim() || undefined,
         });
         pid = nuevo.id;
@@ -1145,10 +1162,11 @@ function NuevoPresupuestoEditor() {
       }
       return pid;
     } catch (e: any) {
-      alert(
-        "Error al guardar. Puede que el Nº ya exista.\n\n" +
-          (e?.message || String(e))
-      );
+      toast.error("No se pudo guardar el presupuesto", {
+        description:
+          (e?.message || String(e)) +
+          ". Puede que el Nº ya exista.",
+      });
       return null;
     } finally {
       setSaving(false);
@@ -1157,7 +1175,7 @@ function NuevoPresupuestoEditor() {
 
   const guardarYNotificar = async () => {
     const pid = await guardar();
-    if (pid) alert("Presupuesto guardado correctamente.");
+    if (pid) toast.success("Presupuesto guardado correctamente");
   };
 
   const exportar = async () => {
@@ -1344,28 +1362,48 @@ function NuevoPresupuestoEditor() {
                 />
               </div>
               <div className="col-span-4">
-                <Label>Instalación</Label>
-                <div className="ss-input-wrap h-10 rounded-[8px] bg-[#0E0E0E] border border-border px-3 flex items-center">
-                  <label className="flex items-center gap-3 cursor-pointer select-none w-full">
-                    <input
-                      type="checkbox"
-                      className="ss-check"
-                      checked={general.instalacion}
-                      onChange={(e) => {
-                        setGeneral({ ...general, instalacion: e.target.checked });
-                        setDirty(true);
-                      }}
-                    />
-                    <span
-                      className={`text-[13px] ${
-                        general.instalacion ? "text-text" : "text-text-muted"
-                      }`}
-                    >
-                      {general.instalacion
-                        ? "Incluida · transporte + montaje"
-                        : "No incluida"}
-                    </span>
-                  </label>
+                <Label hint={general.porte ? "Importe sin margen" : undefined}>
+                  Porte / Instalación
+                </Label>
+                <div className="flex items-stretch gap-2">
+                  <div className="ss-input-wrap h-10 flex-1 rounded-[8px] bg-[#0E0E0E] border border-border px-3 flex items-center">
+                    <label className="flex items-center gap-3 cursor-pointer select-none w-full">
+                      <input
+                        type="checkbox"
+                        className="ss-check"
+                        checked={general.porte}
+                        onChange={(e) => {
+                          setGeneral({ ...general, porte: e.target.checked });
+                          setDirty(true);
+                        }}
+                      />
+                      <span
+                        className={`text-[13px] ${
+                          general.porte ? "text-text" : "text-text-muted"
+                        }`}
+                      >
+                        {general.porte ? "Incluido" : "No incluido"}
+                      </span>
+                    </label>
+                  </div>
+                  {general.porte && (
+                    <div className="ss-input-wrap h-10 w-28 rounded-[8px] bg-[#0E0E0E] border border-border pl-3 pr-2 flex items-center">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={general.porteImporte}
+                        onChange={(e) => {
+                          setGeneral({
+                            ...general,
+                            porteImporte: e.target.value,
+                          });
+                          setDirty(true);
+                        }}
+                        className="flex-1 min-w-0 bg-transparent outline-none num text-[13px] text-text text-right"
+                      />
+                      <span className="ml-1 text-[#555] text-[11px] mono">€</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1453,37 +1491,39 @@ function NuevoPresupuestoEditor() {
             <div className="col-span-5 flex flex-col gap-4">
               <div
                 className={`rounded-[10px] border px-4 py-3 flex items-start gap-3 ${
-                  general.instalacion
+                  general.porte
                     ? "border-state-success/40 bg-state-success/10"
                     : "border-state-danger/35 bg-state-danger/10"
                 }`}
               >
                 <div
                   className={`h-8 w-8 rounded-[8px] grid place-items-center flex-shrink-0 ${
-                    general.instalacion
+                    general.porte
                       ? "bg-state-success/25 text-[#6FBF8E]"
                       : "bg-state-danger/20 text-[#F39C8E]"
                   }`}
                 >
                   <Icon
-                    name={general.instalacion ? "check" : "info"}
+                    name={general.porte ? "check" : "info"}
                     size={15}
-                    stroke={general.instalacion ? 2.4 : 1.6}
+                    stroke={general.porte ? 2.4 : 1.6}
                   />
                 </div>
                 <div>
                   <div
                     className={`text-[13px] font-semibold ${
-                      general.instalacion ? "text-[#6FBF8E]" : "text-[#F39C8E]"
+                      general.porte ? "text-[#6FBF8E]" : "text-[#F39C8E]"
                     }`}
                   >
-                    {general.instalacion
-                      ? "Porte / Instalación INCLUIDOS"
+                    {general.porte
+                      ? `Porte / Instalación INCLUIDOS · ${fmt(
+                          parseNum(general.porteImporte)
+                        )}`
                       : "Porte / Instalación NO incluidos"}
                   </div>
                   <div className="text-[11px] text-text-muted mt-0.5 leading-relaxed">
-                    {general.instalacion
-                      ? "Transporte y montaje contemplados en el precio final indicado al cliente."
+                    {general.porte
+                      ? "Aparece como línea independiente al final del presupuesto, sin margen."
                       : "El transporte y montaje se facturarán aparte según condiciones de logística."}
                   </div>
                 </div>

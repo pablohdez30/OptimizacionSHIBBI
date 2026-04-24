@@ -42,6 +42,7 @@ export type PresupuestoCarga = {
   condiciones_pago: string;
   dias_validez: number;
   incluye_instalacion: boolean;
+  porte_importe: number;
   notas_internas: string;
   lineas: LineaPresupuestoCarga[];
 };
@@ -107,6 +108,7 @@ export async function cargarPresupuesto(
     condiciones_pago: pres.condiciones_pago || "",
     dias_validez: pres.dias_validez || 15,
     incluye_instalacion: !!pres.incluye_instalacion,
+    porte_importe: pres.porte_importe || 0,
     notas_internas: pres.notas_internas || "",
     lineas: lineasCarga,
   };
@@ -144,12 +146,15 @@ export async function cargarConfig(): Promise<ConfigMap> {
   return map;
 }
 
-// Sanitiza un nombre de cliente para incluirlo en un filename (igual que Python).
+// Sanitiza un nombre de cliente para incluirlo en un filename.
+// Permite cualquier letra/número Unicode (tildes, ñ, etc.) y solo escapa
+// los caracteres que realmente rompen filesystems (/ \ : * ? " < > |).
 export function sanitizeName(name: string): string {
   return name
     .split("")
-    .map((c) => (/[a-zA-Z0-9 \-_]/.test(c) ? c : "_"))
+    .map((c) => (/[\p{L}\p{N} \-_.()]/u.test(c) ? c : "_"))
     .join("")
+    .replace(/_+/g, "_")
     .trim();
 }
 
@@ -199,26 +204,7 @@ export async function fetchAsset(url: string): Promise<ArrayBuffer> {
   return res.arrayBuffer();
 }
 
-/**
- * Indica si el presupuesto tiene al menos una línea de detalle
- * con categoría "Envío/Porte" y precio_total > 0.
- */
-export function tienePortePresupuesto(pres: PresupuestoCarga): boolean {
-  return pres.lineas.some((l) =>
-    l.detalles.some(
-      (d) => d.categoria_nombre === "Envío/Porte" && d.precio_total > 0
-    )
-  );
-}
-
-/**
- * Texto a mostrar sobre inclusión de porte/instalación, combinando
- * el checkbox `incluye_instalacion` con la presencia de líneas de porte.
- */
-export function textoPorteInstalacion(pres: PresupuestoCarga): string {
-  const porte = tienePortePresupuesto(pres);
-  if (pres.incluye_instalacion && porte) return "Porte e instalación incluidos";
-  if (pres.incluye_instalacion) return "Instalación incluida";
-  if (porte) return "Porte incluido";
-  return "Porte No incluido";
+/** Si el presupuesto lleva porte activo (checkbox marcado). */
+export function tienePorte(pres: PresupuestoCarga): boolean {
+  return pres.incluye_instalacion;
 }

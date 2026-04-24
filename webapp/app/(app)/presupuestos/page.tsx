@@ -14,15 +14,12 @@ import {
 } from "@/lib/supabase";
 import type { Presupuesto } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
-import {
-  cargarPresupuesto,
-  cargarConfig,
-  textoPorteInstalacion,
-} from "@/lib/export/utils";
+import { cargarPresupuesto, cargarConfig } from "@/lib/export/utils";
 import { exportPresupuesto } from "@/lib/export";
 import BatchExportModal from "@/components/BatchExportModal";
 import ExportResultModal from "@/components/ExportResultModal";
 import ResenaModal from "@/components/ResenaModal";
+import { toast } from "sonner";
 
 const CIF_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "N", "P", "Q", "R", "S", "U", "V", "W"];
 function kindFromNif(nif?: string | null): "Particular" | "Empresa" {
@@ -184,10 +181,14 @@ function PresupuestoPreviewModal({
   }, [onClose]);
 
   const ivaPct = parseFloat(cfg.iva_porcentaje || "21");
-  const base = data ? data.lineas.reduce(
-    (s: number, l: any) => s + l.precio_unitario_final * l.cantidad,
-    0
-  ) : 0;
+  const baseLineas = data
+    ? data.lineas.reduce(
+        (s: number, l: any) => s + l.precio_unitario_final * l.cantidad,
+        0
+      )
+    : 0;
+  const portePres = data?.incluye_instalacion ? data.porte_importe || 0 : 0;
+  const base = baseLineas + portePres;
   const iva = base * (ivaPct / 100);
   const total = base + iva;
 
@@ -328,11 +329,27 @@ function PresupuestoPreviewModal({
                     </div>
                   </div>
                 ))}
+                {data.incluye_instalacion && (
+                  <div className="grid grid-cols-[1fr_70px_90px_110px] gap-3 py-3 border-b border-border/50 text-[12px]">
+                    <div className="text-text font-semibold">
+                      Porte / Instalación
+                    </div>
+                    <div className="text-right text-text-muted num">1</div>
+                    <div className="text-right text-text-muted num">
+                      {fmt(data.porte_importe)}
+                    </div>
+                    <div className="text-right text-text font-medium num">
+                      {fmt(data.porte_importe)}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="mt-4 text-[12px] text-text-muted italic">
-                {textoPorteInstalacion(data)}
-              </div>
+              {!data.incluye_instalacion && (
+                <div className="mt-4 text-[12px] text-text-muted italic">
+                  Porte / Instalación no incluido
+                </div>
+              )}
 
               <div className="flex justify-end mt-6">
                 <div className="w-[300px] border border-border rounded-lg overflow-hidden">
@@ -489,7 +506,9 @@ export default function PresupuestosPage() {
       const fac = await crearFacturaDesdePresupuesto(presupuestoId);
       router.push(`/facturas/${fac.id}`);
     } catch (e) {
-      alert("No se pudo crear la factura:\n" + (e as Error).message);
+      toast.error("No se pudo crear la factura", {
+        description: (e as Error).message,
+      });
       setCreatingFactura(null);
     }
   };
