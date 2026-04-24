@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
@@ -100,8 +102,21 @@ const Icon = ({ name, size = 18 }: { name: string; size?: number }) => {
   }
 };
 
+function initials(input: string) {
+  const parts = input.split(/[\s@.]+/).filter(Boolean);
+  return (parts[0]?.[0] || "").toUpperCase() + (parts[1]?.[0] || "").toUpperCase();
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setEmail(data.user?.email ?? null);
+    });
+  }, []);
 
   return (
     <aside className="w-[220px] shrink-0 h-screen bg-surface-1 border-r border-border flex flex-col overflow-y-auto">
@@ -134,7 +149,30 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="px-6 py-4 text-[11px] text-[#4a4a4a]">v2.0</div>
+      {/* Bloque de usuario + logout */}
+      <div className="border-t border-surface-2 px-4 py-4">
+        <div className="flex items-center gap-2.5 px-2 mb-3">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-gold to-gold-dark text-bg grid place-items-center text-[11px] font-bold flex-shrink-0">
+            {email ? initials(email) : "·"}
+          </div>
+          <div className="min-w-0">
+            <div className="text-[12px] text-text truncate" title={email || ""}>
+              {email || "—"}
+            </div>
+            <div className="mono text-[9px] text-[#555] tracking-[0.12em] uppercase">
+              Sesión activa
+            </div>
+          </div>
+        </div>
+        <form action="/auth/signout" method="post">
+          <button
+            type="submit"
+            className="w-full h-9 rounded-lg border border-border text-[12px] text-text-muted hover:text-state-danger hover:border-state-danger/40 hover:bg-state-danger/10 flex items-center justify-center gap-2 transition-colors"
+          >
+            <Icon name="external" size={12} /> Cerrar sesión
+          </button>
+        </form>
+      </div>
     </aside>
   );
 }

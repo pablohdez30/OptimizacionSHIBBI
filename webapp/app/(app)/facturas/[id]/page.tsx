@@ -15,6 +15,8 @@ import {
   getConfigValue,
 } from "@/lib/supabase";
 import type { Cliente, LineaFactura } from "@/lib/types";
+import { exportFactura } from "@/lib/export";
+import ExportResultModal from "@/components/ExportResultModal";
 
 function fmt(n: number) {
   return (
@@ -84,6 +86,10 @@ export default function EditorFacturaPage() {
 
   // Track dirty
   const [dirty, setDirty] = useState(false);
+  const [exportResult, setExportResult] = useState<{
+    archivos: string[];
+    errores: string[];
+  } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -240,9 +246,12 @@ export default function EditorFacturaPage() {
       if (!confirm("Tienes cambios sin guardar. ¿Guardar antes de exportar?")) return;
       await handleSave();
     }
-    alert(
-      "La generación de PDF/Excel se implementará en la próxima fase.\n\nPor ahora puedes usar la Vista previa desde la lista de Facturas."
-    );
+    try {
+      const res = await exportFactura(facturaId);
+      setExportResult(res);
+    } catch (e) {
+      setExportResult({ archivos: [], errores: [(e as Error).message] });
+    }
   };
 
   if (loading) {
@@ -713,6 +722,14 @@ export default function EditorFacturaPage() {
           </div>
         </div>
       </section>
+
+      {exportResult && (
+        <ExportResultModal
+          archivos={exportResult.archivos}
+          errores={exportResult.errores}
+          onClose={() => setExportResult(null)}
+        />
+      )}
     </div>
   );
 }

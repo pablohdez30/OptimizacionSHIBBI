@@ -13,6 +13,13 @@ import {
   eliminarCategoriaMueble,
 } from "@/lib/supabase";
 import type { CategoriaMaterial, CategoriaMueble } from "@/lib/types";
+import {
+  clearDirHandle,
+  getDirHandle,
+  isFileSystemAccessSupported,
+  saveDirHandle,
+  verifyPermission,
+} from "@/lib/dirHandle";
 
 type ConfigMap = Record<string, string>;
 
@@ -180,6 +187,8 @@ export default function ConfiguracionPage() {
   const [catsMue, setCatsMue] = useState<CategoriaMueble[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [dirName, setDirName] = useState<string | null>(null);
+  const [fsSupported, setFsSupported] = useState(true);
 
   const loadAll = async () => {
     const [cfg, mat, mue] = await Promise.all([
@@ -197,7 +206,47 @@ export default function ConfiguracionPage() {
 
   useEffect(() => {
     loadAll();
+    setFsSupported(isFileSystemAccessSupported());
+    (async () => {
+      try {
+        const h = await getDirHandle();
+        if (h) setDirName(h.name);
+      } catch {
+        /* noop */
+      }
+    })();
   }, []);
+
+  const pickExportDir = async () => {
+    if (!isFileSystemAccessSupported()) {
+      alert(
+        "Tu navegador no soporta la API de carpetas. Usa Chrome, Edge u Opera."
+      );
+      return;
+    }
+    try {
+      // @ts-expect-error — showDirectoryPicker no está aún en los tipos base de TS
+      const handle = (await window.showDirectoryPicker({
+        mode: "readwrite",
+      })) as FileSystemDirectoryHandle;
+      const ok = await verifyPermission(handle, true);
+      if (!ok) {
+        alert("No se concedió permiso de escritura sobre esa carpeta.");
+        return;
+      }
+      await saveDirHandle(handle);
+      setDirName(handle.name);
+    } catch (e) {
+      // El usuario canceló el diálogo → no es un error
+      if ((e as DOMException)?.name === "AbortError") return;
+      alert("Error seleccionando carpeta: " + (e as Error).message);
+    }
+  };
+
+  const clearExportDir = async () => {
+    await clearDirHandle();
+    setDirName(null);
+  };
 
   const upd = (key: string, val: string) =>
     setConfig((c) => ({ ...c, [key]: val }));
@@ -408,25 +457,70 @@ export default function ConfiguracionPage() {
             />
           </Card>
 
-          {/* 05 Ruta de Salida */}
-          <Card num="05" icon="folder" title="Ruta de Salida" subtitle="Destino PDFs">
+          {/* 05 Carpeta de Exportación */}
+          <Card
+            num="05"
+            icon="folder"
+            title="Carpeta de Exportación"
+            subtitle="Destino PDFs / Excel"
+          >
             <p className="text-[12px] text-text-muted mb-3">
-              Carpeta base donde se guardan Presupuestos, Facturas y Desgloses.
+              Carpeta base donde se guardarán automáticamente Presupuestos,
+              Facturas y Desgloses al exportar.
             </p>
-            <Field
-              label="Ruta base"
-              value={config.ruta_salida || ""}
-              onChange={(v) => upd("ruta_salida", v)}
-              placeholder="Dejar vacío para app/output/"
-              wide
-            />
+
+            {!fsSupported && (
+              <div className="rounded-lg border border-state-danger/40 bg-state-danger/10 p-3 mb-3 text-[12px] text-[#F39C8E]">
+                Tu navegador no soporta la API de carpetas. Usa{" "}
+                <span className="font-semibold">Chrome, Edge u Opera</span>.
+              </div>
+            )}
+
+            <div className="rounded-lg border border-border bg-[#0E0E0E] p-3 flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-surface-2 grid place-items-center text-text-muted flex-shrink-0">
+                <Icon name="folder" size={15} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] mono tracking-[0.15em] text-[#555]">
+                  CARPETA ACTUAL
+                </div>
+                <div className="text-[13px] text-text truncate mt-0.5">
+                  {dirName || (
+                    <span className="text-text-muted italic">
+                      Sin carpeta seleccionada
+                    </span>
+                  )}
+                </div>
+              </div>
+              {dirName && (
+                <button
+                  onClick={clearExportDir}
+                  title="Quitar carpeta"
+                  className="h-8 w-8 grid place-items-center rounded-md border border-border text-text-muted hover:text-state-danger hover:border-state-danger/40 hover:bg-state-danger/10"
+                >
+                  <Icon name="x" size={13} />
+                </button>
+              )}
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={pickExportDir}
+                disabled={!fsSupported}
+                className="h-9 pl-3 pr-4 rounded-lg bg-gold text-bg text-[12px] font-semibold flex items-center gap-1.5 hover:bg-gold-light disabled:opacity-50"
+              >
+                <Icon name="folder" size={12} />{" "}
+                {dirName ? "Cambiar carpeta" : "Elegir carpeta"}
+              </button>
+            </div>
+
             <p className="mt-3 text-[11px] text-[#555]">
-              Estructura: <span className="mono">{"{ruta}/CAESPAN 2026/FACTURAS|PRESUPUESTOS|DESGLOSES/"}</span>
+              Estructura:{" "}
+              <span className="mono">
+                {"{carpeta}/CAESPAN " + new Date().getFullYear() +
+                  "/FACTURAS|PRESUPUESTOS|DESGLOSES/"}
+              </span>
             </p>
-            <SaveButton
-              saving={saving === "Ruta"}
-              onClick={() => saveSection(["ruta_salida"], "Ruta")}
-            />
           </Card>
 
           {/* 06 Numeración */}

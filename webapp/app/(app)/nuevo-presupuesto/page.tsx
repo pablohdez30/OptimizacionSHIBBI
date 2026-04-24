@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Icon from "@/components/Icon";
@@ -23,6 +23,8 @@ import {
   getMaterialesActualesProveedor,
   previewNumeroPresupuesto,
 } from "@/lib/supabase";
+import { exportPresupuesto } from "@/lib/export";
+import ExportResultModal from "@/components/ExportResultModal";
 import type {
   Cliente,
   Proveedor,
@@ -704,7 +706,7 @@ function NuevoClienteModal({
 }
 
 /* ---------------- Página principal ---------------- */
-export default function NuevoPresupuestoPage() {
+function NuevoPresupuestoEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -741,6 +743,10 @@ export default function NuevoPresupuestoPage() {
 
   // Modal nuevo cliente
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
+  const [exportResult, setExportResult] = useState<{
+    archivos: string[];
+    errores: string[];
+  } | null>(null);
 
   const loadMaterialesProveedor = async (id: number) => {
     if (materialesCache[id]) return;
@@ -1157,9 +1163,12 @@ export default function NuevoPresupuestoPage() {
   const exportar = async () => {
     const pid = await guardar();
     if (!pid) return;
-    alert(
-      "La generación de Excel y PDF se implementará en la próxima fase.\n\nPor ahora el presupuesto ha quedado guardado."
-    );
+    try {
+      const res = await exportPresupuesto(pid);
+      setExportResult(res);
+    } catch (e) {
+      setExportResult({ archivos: [], errores: [(e as Error).message] });
+    }
   };
 
   /* --------- Render --------- */
@@ -1569,6 +1578,28 @@ export default function NuevoPresupuestoPage() {
           }}
         />
       )}
+
+      {exportResult && (
+        <ExportResultModal
+          archivos={exportResult.archivos}
+          errores={exportResult.errores}
+          onClose={() => setExportResult(null)}
+        />
+      )}
     </div>
+  );
+}
+
+export default function NuevoPresupuestoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-full text-text-muted">
+          Cargando...
+        </div>
+      }
+    >
+      <NuevoPresupuestoEditor />
+    </Suspense>
   );
 }

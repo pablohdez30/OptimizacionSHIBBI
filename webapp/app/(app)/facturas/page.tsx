@@ -13,6 +13,9 @@ import {
   crearFacturaDesdePresupuesto,
   getTotalPresupuesto,
 } from "@/lib/supabase";
+import { exportFactura } from "@/lib/export";
+import BatchExportModal from "@/components/BatchExportModal";
+import ExportResultModal from "@/components/ExportResultModal";
 import type { Factura, LineaFactura } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
 
@@ -490,6 +493,11 @@ export default function FacturasPage() {
   const [ivaPct, setIvaPct] = useState(21);
   const [previewing, setPreviewing] = useState<FacturaConTotal | null>(null);
   const [showNuevaFactura, setShowNuevaFactura] = useState(false);
+  const [showBatchExport, setShowBatchExport] = useState(false);
+  const [exportResult, setExportResult] = useState<{
+    archivos: string[];
+    errores: string[];
+  } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -546,6 +554,29 @@ export default function FacturasPage() {
     load();
   };
 
+  const batchItems = useMemo(
+    () =>
+      filtered.map((f) => ({
+        id: f.id,
+        primary: f.numero_factura,
+        secondary: f.clientes?.nombre || "—",
+        tertiary: f.proyecto || undefined,
+      })),
+    [filtered]
+  );
+
+  const [exportingId, setExportingId] = useState<number | null>(null);
+  const handleExportRow = async (id: number) => {
+    setExportingId(id);
+    try {
+      const res = await exportFactura(id);
+      setExportResult(res);
+    } catch (e) {
+      setExportResult({ archivos: [], errores: [(e as Error).message] });
+    }
+    setExportingId(null);
+  };
+
   const totalFacturado = facturas.reduce((s, f) => s + f.total_iva, 0);
   const pagadas = facturas.filter((f) => f.estado === "Pagada");
   const pendientes = facturas.filter((f) => f.estado !== "Pagada");
@@ -581,7 +612,12 @@ export default function FacturasPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="h-10 px-4 rounded-lg border border-border text-[13px] text-text hover:bg-surface-1 hover:border-[#3a3a3a] flex items-center gap-2">
+            <button
+              onClick={() => setShowBatchExport(true)}
+              disabled={filtered.length === 0}
+              title="Exportar varias facturas a PDF + Excel"
+              className="h-10 px-4 rounded-lg border border-border text-[13px] text-text hover:bg-surface-1 hover:border-[#3a3a3a] flex items-center gap-2 disabled:opacity-40"
+            >
               <Icon name="download" size={14} /> Exportar
             </button>
             <button
@@ -707,7 +743,8 @@ export default function FacturasPage() {
                   filtered.map((f, i) => (
                     <tr
                       key={f.id}
-                      className={`border-b border-surface-2 last:border-b-0 hover:bg-surface-2 transition-colors ${
+                      onClick={() => router.push(`/facturas/${f.id}`)}
+                      className={`border-b border-surface-2 last:border-b-0 hover:bg-surface-2 transition-colors cursor-pointer ${
                         i % 2 === 1 ? "bg-[#141414]" : "bg-surface-1"
                       }`}
                     >
@@ -739,7 +776,10 @@ export default function FacturasPage() {
                       <td className="px-4 py-4 mono text-[12px] text-text-muted whitespace-nowrap">
                         {parseFecha(f.fecha)}
                       </td>
-                      <td className="px-4 py-4">
+                      <td
+                        className="px-4 py-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <StatusPill
                           estado={f.estado || "Pendiente"}
                           onToggle={() => toggleEstado(f)}
@@ -750,7 +790,10 @@ export default function FacturasPage() {
                           {fmtMoney(f.total_iva)}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td
+                        className="px-6 py-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setPreviewing(f)}
@@ -760,9 +803,10 @@ export default function FacturasPage() {
                             <Icon name="eye" size={13} />
                           </button>
                           <button
-                            title="Descargar PDF"
-                            className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 opacity-50 cursor-not-allowed"
-                            disabled
+                            onClick={() => handleExportRow(f.id)}
+                            disabled={exportingId === f.id}
+                            title="Exportar (Excel + PDF)"
+                            className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a] disabled:opacity-50"
                           >
                             <Icon name="download" size={13} />
                           </button>
@@ -823,6 +867,23 @@ export default function FacturasPage() {
             router.push(`/facturas/${id}`);
           }}
           ivaPct={ivaPct}
+        />
+      )}
+
+      {showBatchExport && (
+        <BatchExportModal
+          title="Exportar facturas a PDF + Excel"
+          items={batchItems}
+          exportFn={exportFactura}
+          onClose={() => setShowBatchExport(false)}
+        />
+      )}
+
+      {exportResult && (
+        <ExportResultModal
+          archivos={exportResult.archivos}
+          errores={exportResult.errores}
+          onClose={() => setExportResult(null)}
         />
       )}
     </div>

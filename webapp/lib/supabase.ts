@@ -536,7 +536,7 @@ export async function getPresupuestos(filtros?: {
 }) {
   let q = supabase()
     .from("presupuestos")
-    .select("*, clientes(nombre, nif_cif)");
+    .select("*, clientes(nombre, nif_cif, email)");
 
   if (filtros?.estado) {
     q = q.eq("estado", filtros.estado);
@@ -544,7 +544,7 @@ export async function getPresupuestos(filtros?: {
   const { data, error } = await q.order("id", { ascending: false });
   if (error) throw error;
   return data as (Presupuesto & {
-    clientes: { nombre: string; nif_cif: string } | null;
+    clientes: { nombre: string; nif_cif: string; email: string } | null;
   })[];
 }
 

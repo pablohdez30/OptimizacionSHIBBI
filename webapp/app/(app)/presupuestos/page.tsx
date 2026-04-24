@@ -14,6 +14,15 @@ import {
 } from "@/lib/supabase";
 import type { Presupuesto } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
+import {
+  cargarPresupuesto,
+  cargarConfig,
+  textoPorteInstalacion,
+} from "@/lib/export/utils";
+import { exportPresupuesto } from "@/lib/export";
+import BatchExportModal from "@/components/BatchExportModal";
+import ExportResultModal from "@/components/ExportResultModal";
+import ResenaModal from "@/components/ResenaModal";
 
 const CIF_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "N", "P", "Q", "R", "S", "U", "V", "W"];
 function kindFromNif(nif?: string | null): "Particular" | "Empresa" {
@@ -22,7 +31,7 @@ function kindFromNif(nif?: string | null): "Particular" | "Empresa" {
 }
 
 type PresupuestoRow = Presupuesto & {
-  clientes: { nombre: string; nif_cif: string } | null;
+  clientes: { nombre: string; nif_cif: string; email: string } | null;
   total_base: number;
   total_iva: number;
   clientKind: "Particular" | "Empresa";
@@ -141,16 +150,244 @@ function EstadoDropdown({
   );
 }
 
+// ---------- Preview Modal ----------
+function PresupuestoPreviewModal({
+  presupuestoId,
+  onClose,
+}: {
+  presupuestoId: number;
+  onClose: () => void;
+}) {
+  const [data, setData] = useState<any>(null);
+  const [cfg, setCfg] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [p, c] = await Promise.all([
+          cargarPresupuesto(presupuestoId),
+          cargarConfig(),
+        ]);
+        setData(p);
+        setCfg(c);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [presupuestoId]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const ivaPct = parseFloat(cfg.iva_porcentaje || "21");
+  const base = data ? data.lineas.reduce(
+    (s: number, l: any) => s + l.precio_unitario_final * l.cantidad,
+    0
+  ) : 0;
+  const iva = base * (ivaPct / 100);
+  const total = base + iva;
+
+  const fmt = (n: number) =>
+    n.toLocaleString("es-ES", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + " €";
+
+  const fechaEs = (s: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || "");
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-[760px] max-w-full max-h-[90vh] rounded-[14px] border border-border bg-surface-1 shadow-[0_40px_80px_-20px_rgba(0,0,0,.7)] overflow-hidden flex flex-col">
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
+
+        <div className="relative flex items-center justify-between px-6 py-4 border-b border-surface-2">
+          <div>
+            <div className="mono text-[10px] tracking-[0.2em] text-gold">
+              VISTA PREVIA · PRESUPUESTO
+            </div>
+            <div className="text-[16px] font-semibold text-text mt-0.5">
+              {data?.numero_presupuesto || "—"}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-9 w-9 grid place-items-center rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2"
+          >
+            <Icon name="x" size={15} />
+          </button>
+        </div>
+
+        <div className="relative flex-1 overflow-y-auto px-8 py-6">
+          {loading || !data ? (
+            <div className="text-center py-20 text-text-muted">Cargando...</div>
+          ) : (
+            <>
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <div className="gold-grad text-[28px] font-bold tracking-[0.05em]">
+                    SHIBBISHOP
+                  </div>
+                  <div className="text-[11px] text-text-muted mt-1">Manager</div>
+                </div>
+                <div className="text-right text-[11px] text-text-muted leading-relaxed">
+                  <div className="text-text font-semibold text-[13px]">
+                    {cfg.empresa_nombre || "CAESPAN ARGUMENT S.L."}
+                  </div>
+                  <div>{cfg.empresa_direccion || ""}</div>
+                  <div>{cfg.empresa_ciudad || ""}</div>
+                  <div>{cfg.empresa_cif || ""}</div>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-4 mb-6">
+                <div className="grid grid-cols-[140px_1fr] gap-y-2 gap-x-4 text-[12px]">
+                  <div className="mono text-text-muted tracking-[0.15em]">
+                    PRESUPUESTO Nº:
+                  </div>
+                  <div className="font-semibold text-text">
+                    {data.numero_presupuesto}
+                  </div>
+                  <div className="mono text-text-muted tracking-[0.15em]">
+                    FECHA:
+                  </div>
+                  <div className="text-text">{fechaEs(data.fecha)}</div>
+                  <div className="mono text-text-muted tracking-[0.15em]">
+                    CLIENTE:
+                  </div>
+                  <div className="font-semibold text-text">
+                    {data.cliente_nombre}
+                  </div>
+                  {data.cliente_direccion && (
+                    <>
+                      <div className="mono text-text-muted tracking-[0.15em]">
+                        DIRECCIÓN:
+                      </div>
+                      <div className="text-text-muted">
+                        {data.cliente_direccion}
+                      </div>
+                    </>
+                  )}
+                  {data.cliente_nif && (
+                    <>
+                      <div className="mono text-text-muted tracking-[0.15em]">
+                        C.I.F./N.I.F:
+                      </div>
+                      <div className="text-text-muted">{data.cliente_nif}</div>
+                    </>
+                  )}
+                  {data.proyecto && (
+                    <>
+                      <div className="mono text-text-muted tracking-[0.15em]">
+                        PROYECTO:
+                      </div>
+                      <div className="text-text-muted">{data.proyecto}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t-2 border-border">
+                <div className="grid grid-cols-[1fr_70px_90px_110px] gap-3 py-2 border-b border-border text-[10px] mono tracking-[0.15em] text-text-muted">
+                  <div>CONCEPTO</div>
+                  <div className="text-right">UDS</div>
+                  <div className="text-right">PX</div>
+                  <div className="text-right">TOTAL</div>
+                </div>
+                {data.lineas.map((l: any) => (
+                  <div
+                    key={l.id}
+                    className="grid grid-cols-[1fr_70px_90px_110px] gap-3 py-3 border-b border-border/50 text-[12px]"
+                  >
+                    <div className="text-text">
+                      <div className="font-semibold">{l.nombre_producto}</div>
+                      {l.descripcion && (
+                        <div className="text-text-muted text-[11px] mt-0.5 whitespace-pre-line">
+                          {l.descripcion}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right text-text-muted num">
+                      {l.cantidad}
+                    </div>
+                    <div className="text-right text-text-muted num">
+                      {fmt(l.precio_unitario_final)}
+                    </div>
+                    <div className="text-right text-text font-medium num">
+                      {fmt(l.precio_unitario_final * l.cantidad)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 text-[12px] text-text-muted italic">
+                {textoPorteInstalacion(data)}
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <div className="w-[300px] border border-border rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-2 py-2 px-4 border-b border-border text-[12px]">
+                    <span className="text-text-muted">Total Base</span>
+                    <span className="text-right text-text num">{fmt(base)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 py-2 px-4 border-b border-border text-[12px]">
+                    <span className="text-text-muted">I.V.A {ivaPct}%</span>
+                    <span className="text-right text-text num">{fmt(iva)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 py-3 px-4 bg-gold/10 text-[13px] font-semibold">
+                    <span className="text-gold">TOTAL</span>
+                    <span className="text-right text-gold num">{fmt(total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 border border-border rounded-lg text-[12px]">
+                <div className="font-semibold mb-2">CONDICIONES DE PAGO:</div>
+                <div className="text-text-muted">{data.condiciones_pago}</div>
+                <div className="text-text-muted mt-1">
+                  Los presupuestos caducan a los {data.dias_validez} días
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PresupuestosPage() {
   const router = useRouter();
   const [rows, setRows] = useState<PresupuestoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<string>("Todos");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [page, setPage] = useState(1);
   const [ivaPct, setIvaPct] = useState(21);
   const [creatingFactura, setCreatingFactura] = useState<number | null>(null);
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const [showBatchExport, setShowBatchExport] = useState(false);
+  const [exportingId, setExportingId] = useState<number | null>(null);
+  const [exportResult, setExportResult] = useState<{
+    archivos: string[];
+    errores: string[];
+  } | null>(null);
+  const [resenaFor, setResenaFor] = useState<{
+    id: number;
+    numero: string;
+    nombre: string;
+    email: string;
+  } | null>(null);
   const pageSize = 10;
 
   const load = async () => {
@@ -207,24 +444,20 @@ export default function PresupuestosPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  const toggle = (id: number) => {
-    const n = new Set(selected);
-    n.has(id) ? n.delete(id) : n.add(id);
-    setSelected(n);
-  };
-  const toggleAll = () => {
-    const ids = pageData.map((r) => r.id);
-    const allSel = ids.every((id) => selected.has(id));
-    const n = new Set(selected);
-    ids.forEach((id) => (allSel ? n.delete(id) : n.add(id)));
-    setSelected(n);
-  };
-  const allChecked =
-    pageData.length > 0 && pageData.every((r) => selected.has(r.id));
-
   const changeEstado = async (id: number, estado: string) => {
     await actualizarEstadoPresupuesto(id, estado);
     load();
+  };
+
+  const handleExportRow = async (id: number) => {
+    setExportingId(id);
+    try {
+      const res = await exportPresupuesto(id);
+      setExportResult(res);
+    } catch (e) {
+      setExportResult({ archivos: [], errores: [(e as Error).message] });
+    }
+    setExportingId(null);
   };
 
   const handleDelete = async (id: number) => {
@@ -232,6 +465,17 @@ export default function PresupuestosPage() {
     await eliminarPresupuesto(id);
     load();
   };
+
+  const batchItems = useMemo(
+    () =>
+      filtered.map((r) => ({
+        id: r.id,
+        primary: r.numero_presupuesto,
+        secondary: r.clientes?.nombre || "—",
+        tertiary: r.proyecto || undefined,
+      })),
+    [filtered]
+  );
 
   const handleCrearFactura = async (presupuestoId: number, numero: string) => {
     if (
@@ -274,7 +518,12 @@ export default function PresupuestosPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="h-10 px-4 rounded-lg border border-border text-[13px] text-text hover:bg-surface-1 hover:border-[#3a3a3a] flex items-center gap-2">
+            <button
+              onClick={() => setShowBatchExport(true)}
+              disabled={filtered.length === 0}
+              title="Exportar varios presupuestos a PDF + Excel"
+              className="h-10 px-4 rounded-lg border border-border text-[13px] text-text hover:bg-surface-1 hover:border-[#3a3a3a] flex items-center gap-2 disabled:opacity-40"
+            >
               <Icon name="download" size={14} /> Exportar
             </button>
             <Link
@@ -350,36 +599,12 @@ export default function PresupuestosPage() {
             </span>
           </div>
 
-          {/* Bulk bar */}
-          {selected.size > 0 && (
-            <div className="flex items-center gap-3 px-5 py-2.5 bg-gold/5 border-b border-gold/20">
-              <span className="text-[12px] text-gold font-medium">
-                {selected.size} seleccionado{selected.size > 1 ? "s" : ""}
-              </span>
-              <div className="flex-1" />
-              <button
-                onClick={() => setSelected(new Set())}
-                className="text-text-muted hover:text-text"
-              >
-                <Icon name="x" size={14} />
-              </button>
-            </div>
-          )}
-
           {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-[#0E0E0E] border-b border-border">
                 <tr>
-                  <th className="w-10 pl-5 pr-2 py-3">
-                    <input
-                      type="checkbox"
-                      className="ss-check"
-                      checked={allChecked}
-                      onChange={toggleAll}
-                    />
-                  </th>
-                  <th className="text-left px-3 py-3 mono text-[10px] tracking-[0.18em] text-text-muted font-medium">
+                  <th className="text-left pl-6 pr-3 py-3 mono text-[10px] tracking-[0.18em] text-text-muted font-medium">
                     Nº PRESUPUESTO
                   </th>
                   <th className="text-left px-4 py-3 mono text-[10px] tracking-[0.18em] text-text-muted font-medium">
@@ -405,13 +630,13 @@ export default function PresupuestosPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-16 text-center text-text-muted">
+                    <td colSpan={7} className="py-16 text-center text-text-muted">
                       Cargando...
                     </td>
                   </tr>
                 ) : pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-10 py-20 text-center">
+                    <td colSpan={7} className="px-10 py-20 text-center">
                       <div className="mx-auto h-10 w-10 rounded-lg border border-border grid place-items-center mb-3">
                         <Icon name="search" size={14} className="text-[#555]" />
                       </div>
@@ -423,24 +648,18 @@ export default function PresupuestosPage() {
                   </tr>
                 ) : (
                   pageData.map((r, i) => {
-                    const isSel = selected.has(r.id);
                     const iva = r.total_iva - r.total_base;
                     return (
                       <tr
                         key={r.id}
-                        className={`border-b border-surface-2 last:border-b-0 hover:bg-surface-2 transition-colors ${
+                        onClick={() =>
+                          router.push(`/nuevo-presupuesto?id=${r.id}`)
+                        }
+                        className={`border-b border-surface-2 last:border-b-0 hover:bg-surface-2 transition-colors cursor-pointer ${
                           i % 2 === 1 ? "bg-[#141414]" : "bg-surface-1"
-                        } ${isSel ? "!bg-gold/[0.04]" : ""}`}
+                        }`}
                       >
-                        <td className="pl-5 pr-2 py-4">
-                          <input
-                            type="checkbox"
-                            className="ss-check"
-                            checked={isSel}
-                            onChange={() => toggle(r.id)}
-                          />
-                        </td>
-                        <td className="px-3 py-4 mono text-[12px] text-text">
+                        <td className="pl-6 pr-3 py-4 mono text-[12px] text-text">
                           {r.numero_presupuesto}
                         </td>
                         <td className="px-4 py-4">
@@ -471,7 +690,10 @@ export default function PresupuestosPage() {
                         <td className="px-4 py-4 mono text-[12px] text-text-muted whitespace-nowrap">
                           {parseFecha(r.fecha)}
                         </td>
-                        <td className="px-4 py-4">
+                        <td
+                          className="px-4 py-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <EstadoDropdown
                             estado={r.estado}
                             onChange={(v) => changeEstado(r.id, v)}
@@ -485,11 +707,22 @@ export default function PresupuestosPage() {
                             IVA {fmtMoney(iva)}
                           </div>
                         </td>
-                        <td className="px-4 py-4">
+                        <td
+                          className="px-4 py-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="flex items-center justify-end gap-1.5">
                             {r.estado === "Entregado" && (
                               <button
-                                title="Pedir reseña"
+                                onClick={() =>
+                                  setResenaFor({
+                                    id: r.id,
+                                    numero: r.numero_presupuesto,
+                                    nombre: r.clientes?.nombre || "",
+                                    email: r.clientes?.email || "",
+                                  })
+                                }
+                                title="Pedir reseña al cliente"
                                 className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gold text-bg bg-gold hover:bg-gold-light text-[11px] font-medium"
                               >
                                 <Icon name="star" size={13} /> Reseña
@@ -508,6 +741,21 @@ export default function PresupuestosPage() {
                                 {creatingFactura === r.id ? "Creando…" : "Factura"}
                               </button>
                             )}
+                            <button
+                              onClick={() => setPreviewId(r.id)}
+                              title="Vista previa"
+                              className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
+                            >
+                              <Icon name="eye" size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleExportRow(r.id)}
+                              disabled={exportingId === r.id}
+                              title="Exportar (PDF + Excel)"
+                              className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a] disabled:opacity-50"
+                            >
+                              <Icon name="download" size={13} />
+                            </button>
                             <Link
                               href={`/nuevo-presupuesto?id=${r.id}`}
                               title="Editar"
@@ -583,6 +831,40 @@ export default function PresupuestosPage() {
           </div>
         </div>
       </section>
+
+      {previewId !== null && (
+        <PresupuestoPreviewModal
+          presupuestoId={previewId}
+          onClose={() => setPreviewId(null)}
+        />
+      )}
+
+      {showBatchExport && (
+        <BatchExportModal
+          title="Exportar presupuestos a PDF + Excel"
+          items={batchItems}
+          exportFn={exportPresupuesto}
+          onClose={() => setShowBatchExport(false)}
+        />
+      )}
+
+      {exportResult && (
+        <ExportResultModal
+          archivos={exportResult.archivos}
+          errores={exportResult.errores}
+          onClose={() => setExportResult(null)}
+        />
+      )}
+
+      {resenaFor && (
+        <ResenaModal
+          presupuestoId={resenaFor.id}
+          numeroPresupuesto={resenaFor.numero}
+          clienteNombre={resenaFor.nombre}
+          clienteEmail={resenaFor.email}
+          onClose={() => setResenaFor(null)}
+        />
+      )}
     </div>
   );
 }
