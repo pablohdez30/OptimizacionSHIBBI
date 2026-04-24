@@ -15,6 +15,7 @@ import {
 } from "@/lib/supabase";
 import type { Proveedor, CategoriaMaterial } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
+import { toast } from "sonner";
 
 // ---------- Edit Proveedor Modal ----------
 function EditModal({
@@ -41,8 +42,11 @@ function EditModal({
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(form);
-    setSaving(false);
+    try {
+      await onSave(form);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -180,11 +184,14 @@ function MaterialForm({
   const handleSave = async () => {
     if (!form.descripcion_material.trim()) return;
     setSaving(true);
-    await onSave({
-      ...form,
-      precio: parseFloat(String(form.precio)) || 0,
-    });
-    setSaving(false);
+    try {
+      await onSave({
+        ...form,
+        precio: parseFloat(String(form.precio)) || 0,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -866,13 +873,24 @@ export default function ProveedoresPage() {
   }, [proveedores, q]);
 
   const handleSave = async (form: Partial<Proveedor>) => {
-    if (form.id) {
-      await actualizarProveedor(form.id, form);
-    } else {
-      await crearProveedor(form as Omit<Proveedor, "id" | "fecha_alta" | "activo">);
+    const { id, fecha_alta, activo, ...campos } = form;
+    try {
+      if (id) {
+        await actualizarProveedor(id, campos);
+        toast.success("Proveedor actualizado");
+      } else {
+        await crearProveedor(
+          campos as Omit<Proveedor, "id" | "fecha_alta" | "activo">
+        );
+        toast.success("Proveedor creado");
+      }
+      setEditing(null);
+      load();
+    } catch (e) {
+      toast.error("No se pudo guardar", {
+        description: (e as Error).message,
+      });
     }
-    setEditing(null);
-    load();
   };
 
   const handleDelete = async (id: number) => {

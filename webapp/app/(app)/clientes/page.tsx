@@ -11,6 +11,7 @@ import {
 } from "@/lib/supabase";
 import type { Cliente } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
+import { toast } from "sonner";
 
 // NIF/CIF español:
 //  - CIF (empresa): empieza por letra (A, B, C, D, E, F, G, H, J, N, P, Q, R, S, U, V, W)
@@ -62,8 +63,11 @@ function EditModal({
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(form);
-    setSaving(false);
+    try {
+      await onSave(form);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -361,13 +365,27 @@ export default function ClientesPage() {
   }, [withKind, q, kindFilter]);
 
   const handleSave = async (form: Partial<Cliente>) => {
-    if (form.id) {
-      await actualizarCliente(form.id, form);
-    } else {
-      await crearCliente(form as Omit<Cliente, "id" | "fecha_alta" | "activo">);
+    // Quitar metadatos gestionados por el servidor — PostgREST rechaza
+    // mandar `id` en el payload de UPDATE y no tiene sentido reescribir
+    // fecha_alta/activo desde el formulario.
+    const { id, fecha_alta, activo, ...campos } = form;
+    try {
+      if (id) {
+        await actualizarCliente(id, campos);
+        toast.success("Cliente actualizado");
+      } else {
+        await crearCliente(
+          campos as Omit<Cliente, "id" | "fecha_alta" | "activo">
+        );
+        toast.success("Cliente creado");
+      }
+      setEditing(null);
+      loadClients();
+    } catch (e) {
+      toast.error("No se pudo guardar", {
+        description: (e as Error).message,
+      });
     }
-    setEditing(null);
-    loadClients();
   };
 
   const handleDelete = async (id: number) => {
