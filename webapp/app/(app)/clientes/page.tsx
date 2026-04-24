@@ -365,10 +365,10 @@ export default function ClientesPage() {
   }, [withKind, q, kindFilter]);
 
   const handleSave = async (form: Partial<Cliente>) => {
-    // Quitar metadatos gestionados por el servidor — PostgREST rechaza
-    // mandar `id` en el payload de UPDATE y no tiene sentido reescribir
-    // fecha_alta/activo desde el formulario.
-    const { id, fecha_alta, activo, ...campos } = form;
+    // Quitar metadatos gestionados por el servidor y campos computados
+    // que no existen en la DB (`kind` se deriva del NIF en el frontend).
+    const { id, fecha_alta, activo, kind, ...campos } =
+      form as Partial<Cliente> & { kind?: string };
     try {
       if (id) {
         await actualizarCliente(id, campos);
