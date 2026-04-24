@@ -328,6 +328,20 @@ export default function Icon({
           <path d="M12 16v-4M12 8h.01" />
         </svg>
       );
+    case "check":
+      return (
+        <svg {...props}>
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      );
+    case "sofa":
+      return (
+        <svg {...props}>
+          <path d="M3 14v4a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-4" />
+          <path d="M3 14a2 2 0 0 1 2-2v-2a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v2a2 2 0 0 1 2 2" />
+          <path d="M6 14V9m12 5V9" />
+        </svg>
+      );
     default:
       return null;
   }

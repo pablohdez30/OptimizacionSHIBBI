@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import {
   getFacturas,
@@ -8,6 +9,9 @@ import {
   eliminarFactura,
   getConfigValue,
   getFactura,
+  getPresupuestosAceptadosSinFactura,
+  crearFacturaDesdePresupuesto,
+  getTotalPresupuesto,
 } from "@/lib/supabase";
 import type { Factura, LineaFactura } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
@@ -296,13 +300,196 @@ function PreviewModal({
   );
 }
 
+// ---------- Nueva Factura: modal de elección de presupuesto ----------
+function NuevaFacturaModal({
+  onClose,
+  onCreated,
+  ivaPct,
+}: {
+  onClose: () => void;
+  onCreated: (facId: number) => void;
+  ivaPct: number;
+}) {
+  const [presupuestos, setPresupuestos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const list = await getPresupuestosAceptadosSinFactura();
+        // Precargar totales
+        const withTotals = await Promise.all(
+          list.map(async (p: any) => {
+            const base = await getTotalPresupuesto(p.id);
+            return { ...p, total: base * (1 + ivaPct / 100) };
+          })
+        );
+        setPresupuestos(withTotals);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [ivaPct]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return presupuestos;
+    const s = query.toLowerCase();
+    return presupuestos.filter(
+      (p) =>
+        p.numero_presupuesto.toLowerCase().includes(s) ||
+        (p.clientes?.nombre || "").toLowerCase().includes(s) ||
+        (p.proyecto || "").toLowerCase().includes(s)
+    );
+  }, [presupuestos, query]);
+
+  const handleCrear = async (p: any) => {
+    if (
+      !confirm(
+        `¿Crear factura a partir del presupuesto ${p.numero_presupuesto}?`
+      )
+    )
+      return;
+    setCreating(p.id);
+    try {
+      const fac = await crearFacturaDesdePresupuesto(p.id);
+      onCreated(fac.id);
+    } catch (e) {
+      alert("No se pudo crear la factura:\n" + (e as Error).message);
+      setCreating(null);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm grid place-items-center px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl max-h-[85vh] rounded-[14px] border border-border bg-surface-1 shadow-[0_40px_80px_-20px_rgba(0,0,0,.7)] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-surface-2 flex items-center justify-between">
+          <div>
+            <div className="mono text-[10px] tracking-[0.2em] text-gold">
+              CREAR · FACTURA
+            </div>
+            <h3 className="text-[16px] font-semibold mt-0.5">
+              Elige el presupuesto de origen
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-9 w-9 grid place-items-center rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2"
+          >
+            <Icon name="x" size={15} />
+          </button>
+        </div>
+
+        <div className="px-6 py-3 border-b border-surface-2">
+          <div className="flex items-center h-10 rounded-lg bg-[#0E0E0E] border border-border px-3">
+            <Icon name="search" size={14} className="text-[#555] mr-2" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar cliente, Nº o proyecto…"
+              className="flex-1 bg-transparent outline-none text-[13px] placeholder:text-[#555]"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="py-16 text-center text-text-muted text-[13px]">
+              Cargando presupuestos…
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-16 px-6 text-center">
+              <div className="mx-auto h-10 w-10 rounded-lg border border-border grid place-items-center mb-3">
+                <Icon name="invoice" size={14} className="text-[#555]" />
+              </div>
+              <div className="text-sm text-text">
+                No hay presupuestos aceptados sin factura
+              </div>
+              <div className="text-xs text-text-muted mt-1">
+                Marca un presupuesto como{" "}
+                <span className="text-gold">Aceptado</span> en el listado para
+                poder facturarlo.
+              </div>
+            </div>
+          ) : (
+            <ul className="divide-y divide-surface-2">
+              {filtered.map((p: any) => {
+                const nombre = p.clientes?.nombre || "—";
+                const col = colorFromName(nombre);
+                return (
+                  <li
+                    key={p.id}
+                    className="px-6 py-4 flex items-center gap-4 hover:bg-surface-2"
+                  >
+                    <div
+                      className="h-9 w-9 rounded-lg grid place-items-center text-[11px] font-semibold flex-shrink-0"
+                      style={{
+                        background: `${col.bg}20`,
+                        border: `1px solid ${col.bg}50`,
+                        color: col.bg,
+                      }}
+                    >
+                      {initials(nombre)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] text-text truncate">
+                        {nombre}
+                      </div>
+                      <div className="mono text-[11px] text-text-muted">
+                        {p.numero_presupuesto}
+                        {p.proyecto ? ` · ${p.proyecto}` : ""}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="num text-[13px] font-semibold">
+                        {fmtMoney(p.total || 0)}
+                      </div>
+                      <div className="mono text-[10px] text-[#555]">
+                        {p.estado}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleCrear(p)}
+                      disabled={creating === p.id}
+                      className="ml-3 h-8 px-3 rounded-md bg-gold text-bg text-[12px] font-semibold hover:bg-gold-light disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <Icon name="invoice" size={12} />
+                      {creating === p.id ? "Creando…" : "Facturar"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------- Main Page ----------
 export default function FacturasPage() {
+  const router = useRouter();
   const [facturas, setFacturas] = useState<FacturaConTotal[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [ivaPct, setIvaPct] = useState(21);
   const [previewing, setPreviewing] = useState<FacturaConTotal | null>(null);
+  const [showNuevaFactura, setShowNuevaFactura] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -397,7 +584,10 @@ export default function FacturasPage() {
             <button className="h-10 px-4 rounded-lg border border-border text-[13px] text-text hover:bg-surface-1 hover:border-[#3a3a3a] flex items-center gap-2">
               <Icon name="download" size={14} /> Exportar
             </button>
-            <button className="h-10 pl-3.5 pr-4 rounded-lg bg-gold text-bg text-[13px] font-semibold flex items-center gap-1.5 hover:bg-gold-light">
+            <button
+              onClick={() => setShowNuevaFactura(true)}
+              className="h-10 pl-3.5 pr-4 rounded-lg bg-gold text-bg text-[13px] font-semibold flex items-center gap-1.5 hover:bg-gold-light"
+            >
               <Icon name="plus" size={14} stroke={2.4} /> Nueva Factura
             </button>
           </div>
@@ -621,6 +811,17 @@ export default function FacturasPage() {
         <PreviewModal
           factura={previewing}
           onClose={() => setPreviewing(null)}
+          ivaPct={ivaPct}
+        />
+      )}
+
+      {showNuevaFactura && (
+        <NuevaFacturaModal
+          onClose={() => setShowNuevaFactura(false)}
+          onCreated={(id) => {
+            setShowNuevaFactura(false);
+            router.push(`/facturas/${id}`);
+          }}
           ivaPct={ivaPct}
         />
       )}

@@ -363,6 +363,120 @@ export async function calcularTotalFactura(facturaId: number) {
   return base - (factura?.adelanto_importe || 0);
 }
 
+// Próximo número de factura "YY-NNN"
+export async function previewNumeroFactura() {
+  const year = new Date().getFullYear().toString().slice(-2);
+
+  const confValor = await getConfigValue("ultimo_num_factura");
+  let confSeq = 0;
+  if (confValor) {
+    const parts = confValor.split("-");
+    const n = parseInt(parts[1] || "0", 10);
+    if (!isNaN(n)) confSeq = n;
+  }
+
+  const { data } = await supabase()
+    .from("facturas")
+    .select("numero_factura")
+    .like("numero_factura", `${year}-%`)
+    .order("id", { ascending: false })
+    .limit(1);
+
+  let dbSeq = 0;
+  if (data && data.length > 0) {
+    const parts = data[0].numero_factura.split("-");
+    const n = parseInt(parts[1] || "0", 10);
+    if (!isNaN(n)) dbSeq = n;
+  }
+
+  const seq = Math.max(confSeq, dbSeq) + 1;
+  return `${year}-${String(seq).padStart(3, "0")}`;
+}
+
+// Presupuestos aceptados que todavía no tienen factura asociada
+export async function getPresupuestosAceptadosSinFactura() {
+  const { data: pres, error } = await supabase()
+    .from("presupuestos")
+    .select("*, clientes(nombre, nif_cif)")
+    .in("estado", ["Aceptado", "En producción", "Entregado"])
+    .order("id", { ascending: false });
+  if (error) throw error;
+
+  const { data: facs } = await supabase()
+    .from("facturas")
+    .select("presupuesto_id")
+    .not("presupuesto_id", "is", null);
+  const usados = new Set<number>(
+    (facs || []).map((f: any) => f.presupuesto_id as number)
+  );
+  return (pres || []).filter((p: any) => !usados.has(p.id));
+}
+
+// Crea factura a partir de un presupuesto (equivalente a FacturaModel.crear_desde_presupuesto)
+export async function crearFacturaDesdePresupuesto(presupuestoId: number) {
+  const pres = await getPresupuesto(presupuestoId);
+  if (!pres) throw new Error("Presupuesto no encontrado");
+
+  const numero = await previewNumeroFactura();
+  const { data: fac, error } = await supabase()
+    .from("facturas")
+    .insert({
+      numero_factura: numero,
+      presupuesto_id: presupuestoId,
+      cliente_id: pres.cliente_id,
+      proyecto: pres.proyecto || "",
+      fecha: new Date().toISOString().slice(0, 10),
+      notas_internas: "",
+      adelanto_descripcion: "",
+      adelanto_importe: 0,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+
+  const lineas = await getLineasPresupuesto(presupuestoId);
+  let orden = 0;
+  for (const linea of lineas) {
+    const detalles = await getDetallesCoste(linea.id);
+
+    // Suma los costes con categoría "Envío/Porte" para extraerlos como línea aparte
+    const porteCoste = detalles
+      .filter((d: any) => d.categorias_material?.nombre === "Envío/Porte")
+      .reduce((s: number, d: any) => s + (d.precio_total || 0), 0);
+
+    let precioProducto = linea.precio_unitario_final || 0;
+    if (porteCoste > 0) {
+      const margen = linea.margen_porcentaje || 0;
+      const porteConMargen = porteCoste * (1 + margen / 100);
+      precioProducto = precioProducto - porteConMargen;
+    }
+
+    await supabase().from("lineas_factura").insert({
+      factura_id: fac.id,
+      concepto: linea.nombre_producto,
+      descripcion: linea.descripcion || "",
+      unidades: linea.cantidad,
+      precio_unitario: Math.round(precioProducto * 100) / 100,
+      es_porte: 0,
+      orden: orden++,
+    });
+
+    if (porteCoste > 0) {
+      await supabase().from("lineas_factura").insert({
+        factura_id: fac.id,
+        concepto: `Porte - ${linea.nombre_producto}`,
+        descripcion: "",
+        unidades: 1,
+        precio_unitario: Math.round(porteCoste * 100) / 100,
+        es_porte: 1,
+        orden: orden++,
+      });
+    }
+  }
+
+  return fac as Factura;
+}
+
 // ============================================================
 // Histórico muebles
 // ============================================================
@@ -481,6 +595,248 @@ export async function getTotalPresupuesto(id: number) {
     (s: number, l: any) => s + (l.cantidad || 0) * (l.precio_unitario_final || 0),
     0
   );
+}
+
+// ---------- Editor: cargar / guardar un presupuesto completo ----------
+export async function getPresupuesto(id: number) {
+  const { data, error } = await supabase()
+    .from("presupuestos")
+    .select("*, clientes(id, nombre, nif_cif, direccion)")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data as Presupuesto & {
+    clientes: { id: number; nombre: string; nif_cif: string; direccion: string } | null;
+  };
+}
+
+export async function getLineasPresupuesto(presupuestoId: number) {
+  const { data, error } = await supabase()
+    .from("lineas_presupuesto")
+    .select("*, categorias_mueble(nombre)")
+    .eq("presupuesto_id", presupuestoId)
+    .order("orden");
+  if (error) throw error;
+  return data as any[];
+}
+
+export async function getDetallesCoste(lineaId: number) {
+  const { data, error } = await supabase()
+    .from("detalles_coste")
+    .select(
+      "*, categorias_material(nombre), proveedores(nombre)"
+    )
+    .eq("linea_presupuesto_id", lineaId)
+    .order("id");
+  if (error) throw error;
+  return data as any[];
+}
+
+// Genera el próximo número "YY-NNN" mirando la configuración y el último en DB
+export async function previewNumeroPresupuesto() {
+  const year = new Date().getFullYear().toString().slice(-2);
+
+  const confValor = await getConfigValue("ultimo_num_presupuesto");
+  let confSeq = 0;
+  if (confValor) {
+    const parts = confValor.split("-");
+    const n = parseInt(parts[1] || "0", 10);
+    if (!isNaN(n)) confSeq = n;
+  }
+
+  const { data } = await supabase()
+    .from("presupuestos")
+    .select("numero_presupuesto")
+    .like("numero_presupuesto", `${year}-%`)
+    .order("id", { ascending: false })
+    .limit(1);
+
+  let dbSeq = 0;
+  if (data && data.length > 0) {
+    const parts = data[0].numero_presupuesto.split("-");
+    const n = parseInt(parts[1] || "0", 10);
+    if (!isNaN(n)) dbSeq = n;
+  }
+
+  const seq = Math.max(confSeq, dbSeq) + 1;
+  return `${year}-${String(seq).padStart(3, "0")}`;
+}
+
+export async function crearPresupuesto(args: {
+  cliente_id: number;
+  proyecto?: string;
+  fecha?: string;
+  notas_internas?: string;
+  condiciones_pago?: string;
+  incluye_instalacion?: boolean;
+  dias_validez?: number;
+  numero_presupuesto?: string;
+}) {
+  const numero =
+    args.numero_presupuesto?.trim() || (await previewNumeroPresupuesto());
+  const fecha = args.fecha || new Date().toISOString().slice(0, 10);
+
+  let condiciones = args.condiciones_pago;
+  if (!condiciones) {
+    condiciones = (await getConfigValue("condiciones_pago_default")) || "";
+  }
+  let dias = args.dias_validez;
+  if (dias == null) {
+    const v = await getConfigValue("dias_validez_default");
+    dias = v ? parseInt(v, 10) : 15;
+  }
+
+  const { data, error } = await supabase()
+    .from("presupuestos")
+    .insert({
+      numero_presupuesto: numero,
+      cliente_id: args.cliente_id,
+      proyecto: args.proyecto || "",
+      fecha,
+      estado: "Borrador",
+      notas_internas: args.notas_internas || "",
+      condiciones_pago: condiciones,
+      dias_validez: dias,
+      incluye_instalacion: args.incluye_instalacion ? 1 : 0,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Presupuesto;
+}
+
+export async function actualizarPresupuesto(
+  id: number,
+  campos: Partial<Presupuesto>
+) {
+  const { error } = await supabase()
+    .from("presupuestos")
+    .update(campos)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function agregarLineaPresupuesto(linea: {
+  presupuesto_id: number;
+  nombre_producto: string;
+  descripcion?: string;
+  cantidad?: number;
+  precio_unitario_final?: number;
+  margen_porcentaje?: number;
+  orden?: number;
+  categoria_mueble_id?: number | null;
+}) {
+  const { data, error } = await supabase()
+    .from("lineas_presupuesto")
+    .insert({
+      presupuesto_id: linea.presupuesto_id,
+      nombre_producto: linea.nombre_producto,
+      descripcion: linea.descripcion || "",
+      cantidad: linea.cantidad ?? 1,
+      precio_unitario_final: linea.precio_unitario_final ?? 0,
+      margen_porcentaje: linea.margen_porcentaje ?? 100,
+      orden: linea.orden ?? 0,
+      categoria_mueble_id: linea.categoria_mueble_id ?? null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as { id: number };
+}
+
+export async function agregarDetalleCoste(detalle: {
+  linea_presupuesto_id: number;
+  proveedor_id?: number | null;
+  categoria_material_id?: number | null;
+  descripcion?: string;
+  cantidad?: number;
+  precio_unitario?: number;
+  notas?: string;
+}) {
+  const cantidad = detalle.cantidad ?? 1;
+  const precio = detalle.precio_unitario ?? 0;
+  const { error } = await supabase()
+    .from("detalles_coste")
+    .insert({
+      linea_presupuesto_id: detalle.linea_presupuesto_id,
+      proveedor_id: detalle.proveedor_id ?? null,
+      categoria_material_id: detalle.categoria_material_id ?? null,
+      descripcion: detalle.descripcion || "",
+      cantidad,
+      precio_unitario: precio,
+      precio_total: cantidad * precio,
+      notas: detalle.notas || "",
+    });
+  if (error) throw error;
+}
+
+export async function eliminarLineasPresupuesto(presupuestoId: number) {
+  const { data: lineas } = await supabase()
+    .from("lineas_presupuesto")
+    .select("id")
+    .eq("presupuesto_id", presupuestoId);
+  if (lineas && lineas.length > 0) {
+    const ids = lineas.map((l: any) => l.id);
+    await supabase()
+      .from("detalles_coste")
+      .delete()
+      .in("linea_presupuesto_id", ids);
+  }
+  await supabase()
+    .from("lineas_presupuesto")
+    .delete()
+    .eq("presupuesto_id", presupuestoId);
+}
+
+// Últimos precios (uno por material) de un proveedor
+export async function getMaterialesActualesProveedor(proveedorId: number) {
+  const { data, error } = await supabase()
+    .from("historico_precios_proveedor")
+    .select("*, categorias_material(nombre)")
+    .eq("proveedor_id", proveedorId)
+    .order("fecha_precio", { ascending: false });
+  if (error) throw error;
+  const seen = new Map<string, any>();
+  (data || []).forEach((r: any) => {
+    if (!seen.has(r.descripcion_material)) seen.set(r.descripcion_material, r);
+  });
+  return Array.from(seen.values());
+}
+
+// Replica HistoricoMueblesModel.sincronizar_presupuesto
+export async function sincronizarHistoricoMuebles(presupuestoId: number) {
+  const { data: pres } = await supabase()
+    .from("presupuestos")
+    .select("cliente_id, fecha")
+    .eq("id", presupuestoId)
+    .single();
+  if (!pres) return;
+
+  await supabase()
+    .from("historico_muebles")
+    .delete()
+    .eq("presupuesto_id", presupuestoId);
+
+  const { data: lineas } = await supabase()
+    .from("lineas_presupuesto")
+    .select("*")
+    .eq("presupuesto_id", presupuestoId)
+    .order("orden");
+
+  if (!lineas || lineas.length === 0) return;
+
+  const rows = lineas.map((l: any) => ({
+    linea_presupuesto_id: l.id,
+    presupuesto_id: presupuestoId,
+    cliente_id: pres.cliente_id,
+    categoria_mueble_id: l.categoria_mueble_id || null,
+    nombre: l.nombre_producto || "",
+    descripcion: l.descripcion || "",
+    fecha: pres.fecha,
+    precio_unitario: l.precio_unitario_final || 0,
+    cantidad: l.cantidad || 1,
+  }));
+  await supabase().from("historico_muebles").insert(rows);
 }
 
 // ============================================================

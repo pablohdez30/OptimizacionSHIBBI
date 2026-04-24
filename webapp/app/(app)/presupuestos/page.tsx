@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import {
   getPresupuestos,
@@ -8,6 +10,7 @@ import {
   eliminarPresupuesto,
   getTotalPresupuesto,
   getConfigValue,
+  crearFacturaDesdePresupuesto,
 } from "@/lib/supabase";
 import type { Presupuesto } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
@@ -139,6 +142,7 @@ function EstadoDropdown({
 }
 
 export default function PresupuestosPage() {
+  const router = useRouter();
   const [rows, setRows] = useState<PresupuestoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -146,6 +150,7 @@ export default function PresupuestosPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [page, setPage] = useState(1);
   const [ivaPct, setIvaPct] = useState(21);
+  const [creatingFactura, setCreatingFactura] = useState<number | null>(null);
   const pageSize = 10;
 
   const load = async () => {
@@ -228,6 +233,23 @@ export default function PresupuestosPage() {
     load();
   };
 
+  const handleCrearFactura = async (presupuestoId: number, numero: string) => {
+    if (
+      !confirm(
+        `¿Crear factura a partir del presupuesto ${numero}?\n\nSe generará una factura nueva con las líneas del presupuesto y podrás editarla después.`
+      )
+    )
+      return;
+    setCreatingFactura(presupuestoId);
+    try {
+      const fac = await crearFacturaDesdePresupuesto(presupuestoId);
+      router.push(`/facturas/${fac.id}`);
+    } catch (e) {
+      alert("No se pudo crear la factura:\n" + (e as Error).message);
+      setCreatingFactura(null);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Page header */}
@@ -255,9 +277,12 @@ export default function PresupuestosPage() {
             <button className="h-10 px-4 rounded-lg border border-border text-[13px] text-text hover:bg-surface-1 hover:border-[#3a3a3a] flex items-center gap-2">
               <Icon name="download" size={14} /> Exportar
             </button>
-            <button className="h-10 pl-3.5 pr-4 rounded-lg bg-gold text-bg text-[13px] font-semibold flex items-center gap-1.5 hover:bg-gold-light">
+            <Link
+              href="/nuevo-presupuesto"
+              className="h-10 pl-3.5 pr-4 rounded-lg bg-gold text-bg text-[13px] font-semibold flex items-center gap-1.5 hover:bg-gold-light"
+            >
               <Icon name="plus" size={14} stroke={2.4} /> Nuevo Presupuesto
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -472,18 +497,24 @@ export default function PresupuestosPage() {
                             )}
                             {r.estado === "Aceptado" && (
                               <button
+                                onClick={() =>
+                                  handleCrearFactura(r.id, r.numero_presupuesto)
+                                }
+                                disabled={creatingFactura === r.id}
                                 title="Crear factura"
-                                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gold/30 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold/60 text-[11px] font-medium"
+                                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gold/30 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold/60 text-[11px] font-medium disabled:opacity-50"
                               >
-                                <Icon name="invoice" size={13} /> Factura
+                                <Icon name="invoice" size={13} />
+                                {creatingFactura === r.id ? "Creando…" : "Factura"}
                               </button>
                             )}
-                            <button
+                            <Link
+                              href={`/nuevo-presupuesto?id=${r.id}`}
                               title="Editar"
                               className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
                             >
                               <Icon name="edit" size={13} />
-                            </button>
+                            </Link>
                             <button
                               title="Duplicar"
                               className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
