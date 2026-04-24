@@ -306,6 +306,45 @@ export async function eliminarFactura(id: number) {
   if (error) throw error;
 }
 
+export async function actualizarFactura(
+  id: number,
+  campos: Partial<Factura>
+) {
+  const { error } = await supabase().from("facturas").update(campos).eq("id", id);
+  if (error) throw error;
+}
+
+export async function agregarLineaFactura(
+  linea: Omit<LineaFactura, "id">
+) {
+  const { data, error } = await supabase()
+    .from("lineas_factura")
+    .insert(linea)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as LineaFactura;
+}
+
+export async function actualizarLineaFactura(
+  id: number,
+  campos: Partial<LineaFactura>
+) {
+  const { error } = await supabase()
+    .from("lineas_factura")
+    .update(campos)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function eliminarLineaFactura(id: number) {
+  const { error } = await supabase()
+    .from("lineas_factura")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
 export async function calcularTotalFactura(facturaId: number) {
   const { data: factura } = await supabase()
     .from("facturas")
@@ -488,12 +527,121 @@ export async function actualizarEventoCalendario(
   if (error) throw error;
 }
 
+// ============================================================
+// Dashboard stats
+// ============================================================
 export async function eliminarEventoCalendario(id: number) {
   const { error } = await supabase()
     .from("eventos_calendario")
     .delete()
     .eq("id", id);
   if (error) throw error;
+}
+
+export async function getDashboardStats() {
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonth = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}`;
+
+  // Presupuestos creados este mes y el anterior
+  const [presThis, presPrev] = await Promise.all([
+    supabase()
+      .from("presupuestos")
+      .select("id, estado")
+      .like("fecha", `${thisMonth}%`),
+    supabase()
+      .from("presupuestos")
+      .select("id, estado")
+      .like("fecha", `${prevMonth}%`),
+  ]);
+
+  // Facturas este mes y el anterior (con líneas para calcular totales)
+  const [facThis, facPrev] = await Promise.all([
+    supabase()
+      .from("facturas")
+      .select("id, adelanto_importe")
+      .like("fecha", `${thisMonth}%`),
+    supabase()
+      .from("facturas")
+      .select("id, adelanto_importe")
+      .like("fecha", `${prevMonth}%`),
+  ]);
+
+  const sumFacturas = async (facturas: any[] | null) => {
+    if (!facturas || !facturas.length) return 0;
+    const ids = facturas.map((f) => f.id);
+    const { data } = await supabase()
+      .from("lineas_factura")
+      .select("factura_id, unidades, precio_unitario")
+      .in("factura_id", ids);
+    const byF: Record<number, number> = {};
+    (data || []).forEach((l: any) => {
+      byF[l.factura_id] = (byF[l.factura_id] || 0) + l.unidades * l.precio_unitario;
+    });
+    return facturas.reduce(
+      (s, f) => s + ((byF[f.id] || 0) - (f.adelanto_importe || 0)),
+      0
+    );
+  };
+
+  const [facturadoThis, facturadoPrev] = await Promise.all([
+    sumFacturas(facThis.data),
+    sumFacturas(facPrev.data),
+  ]);
+
+  // Tasa de aceptación
+  const aceptThis = (presThis.data || []).filter(
+    (p: any) => p.estado === "Aceptado" || p.estado === "En producción" || p.estado === "Entregado"
+  ).length;
+  const aceptPrev = (presPrev.data || []).filter(
+    (p: any) => p.estado === "Aceptado" || p.estado === "En producción" || p.estado === "Entregado"
+  ).length;
+  const tasaThis = (presThis.data?.length || 0) > 0
+    ? Math.round((aceptThis / presThis.data!.length) * 100)
+    : 0;
+  const tasaPrev = (presPrev.data?.length || 0) > 0
+    ? Math.round((aceptPrev / presPrev.data!.length) * 100)
+    : 0;
+
+  // Pendientes de entrega (Aceptado o En producción)
+  const { data: pendientes } = await supabase()
+    .from("presupuestos")
+    .select("id")
+    .in("estado", ["Aceptado", "En producción"]);
+
+  return {
+    presupuestosMes: presThis.data?.length || 0,
+    presupuestosPrevMes: presPrev.data?.length || 0,
+    facturadoMes: facturadoThis,
+    facturadoPrevMes: facturadoPrev,
+    tasaAceptacion: tasaThis,
+    tasaAceptacionPrev: tasaPrev,
+    pendientesEntrega: pendientes?.length || 0,
+  };
+}
+
+export async function getPresupuestosRecientes(limit = 6) {
+  const { data, error } = await supabase()
+    .from("presupuestos")
+    .select("*, clientes(nombre, nif_cif)")
+    .order("id", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data as any[];
+}
+
+export async function getProximasEntregas(limit = 4) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase()
+    .from("eventos_calendario")
+    .select("*")
+    .gte("fecha", today)
+    .order("fecha")
+    .limit(limit);
+  if (error) throw error;
+  return data as EventoCalendario[];
 }
 
 export async function setConfigValue(

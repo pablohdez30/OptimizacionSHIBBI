@@ -259,6 +259,75 @@ export default function Icon({
           <path d="M3 6h18M6 12h12M10 18h4" />
         </svg>
       );
+    case "arrow-up":
+      return (
+        <svg {...props}>
+          <path d="M12 19V5M5 12l7-7 7 7" />
+        </svg>
+      );
+    case "arrow-down":
+      return (
+        <svg {...props}>
+          <path d="M12 5v14M19 12l-7 7-7-7" />
+        </svg>
+      );
+    case "more":
+      return (
+        <svg {...props}>
+          <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "coins":
+      return (
+        <svg {...props}>
+          <circle cx="8" cy="8" r="6" />
+          <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
+          <path d="M7 6h1v4M6.71 13.88l.7.71-2.82 2.82" />
+        </svg>
+      );
+    case "percent":
+      return (
+        <svg {...props}>
+          <line x1="19" y1="5" x2="5" y2="19" />
+          <circle cx="6.5" cy="6.5" r="2.5" />
+          <circle cx="17.5" cy="17.5" r="2.5" />
+        </svg>
+      );
+    case "box":
+      return (
+        <svg {...props}>
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+          <path d="m3.27 6.96 8.73 5.05 8.73-5.05M12 22.08V12" />
+        </svg>
+      );
+    case "grip":
+      return (
+        <svg {...props}>
+          <circle cx="9" cy="5" r="1" fill="currentColor" />
+          <circle cx="9" cy="12" r="1" fill="currentColor" />
+          <circle cx="9" cy="19" r="1" fill="currentColor" />
+          <circle cx="15" cy="5" r="1" fill="currentColor" />
+          <circle cx="15" cy="12" r="1" fill="currentColor" />
+          <circle cx="15" cy="19" r="1" fill="currentColor" />
+        </svg>
+      );
+    case "truck":
+      return (
+        <svg {...props}>
+          <path d="M1 3h14v13H1zM15 8h4l3 3v5h-7" />
+          <circle cx="6" cy="18" r="2" />
+          <circle cx="18" cy="18" r="2" />
+        </svg>
+      );
+    case "info":
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 16v-4M12 8h.01" />
+        </svg>
+      );
     default:
       return null;
   }

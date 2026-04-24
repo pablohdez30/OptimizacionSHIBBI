@@ -576,13 +576,13 @@ export default function FacturasPage() {
                           >
                             <Icon name="download" size={13} />
                           </button>
-                          <button
+                          <a
+                            href={`/facturas/${f.id}`}
                             title="Editar"
-                            className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 opacity-50 cursor-not-allowed"
-                            disabled
+                            className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
                           >
                             <Icon name="edit" size={13} />
-                          </button>
+                          </a>
                           <button
                             onClick={() => handleDelete(f.id)}
                             title="Eliminar"
