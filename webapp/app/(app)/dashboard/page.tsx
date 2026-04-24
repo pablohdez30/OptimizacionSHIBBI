@@ -41,6 +41,12 @@ function fmtPct(change: number, prev: number, curr: number) {
   return `${sign}${pct.toFixed(1)}%`;
 }
 
+function fmtDelta(prev: number, curr: number) {
+  const diff = curr - prev;
+  const sign = diff >= 0 ? "+" : "";
+  return `${sign}${fmtMoney(diff)}`;
+}
+
 // ---------- Sparkline ----------
 function Sparkline({
   data,
@@ -240,7 +246,7 @@ export default function DashboardPage() {
     ? fmtPct(0, stats.presupuestosPrevMes, stats.presupuestosMes)
     : null;
   const facDelta = stats
-    ? fmtPct(0, stats.facturadoPrevMes, stats.facturadoMes)
+    ? fmtDelta(stats.facturadoPrevMes, stats.facturadoMes)
     : null;
   const tasaDelta = stats
     ? `${stats.tasaAceptacion - stats.tasaAceptacionPrev >= 0 ? "+" : ""}${stats.tasaAceptacion - stats.tasaAceptacionPrev} pp`
