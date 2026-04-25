@@ -1,0 +1,9 @@
+nombre,categoria,precio,modificador,descripcion,aplicableA,orden,activo
+Sin acabado (madera natural),acabado,0,fijo,Madera sin tratar. Tú aplicas lo que prefieras o lo dejas natural.,"mesa,estanteria,espejo",1,true
+Aceite natural,acabado,35,fijo,Aceite que protege la madera y resalta la veta. Acabado mate natural.,"mesa,estanteria",2,true
+Barniz mate,acabado,50,fijo,Barniz protector mate. Resistente a manchas y humedad.,"mesa,estanteria",3,true
+Tinte color a elegir,acabado,70,fijo,Tinte personalizado en el tono que prefieras. Mantiene la veta visible.,"mesa,estanteria",4,true
+Lacado color opaco,acabado,90,fijo,Lacado en color a elegir. Acabado opaco que tapa la veta.,"mesa,estanteria",5,true
+Montaje a domicilio Madrid,servicio,50,fijo,Montaje en domicilio dentro de Madrid capital. Fuera de Madrid lo calculamos según destino.,"mesa,estanteria,espejo,otro",6,true
+Embalaje regalo,servicio,15,fijo,Caja de regalo personalizada con tarjeta dedicada.,"mesa,estanteria,espejo,otro",7,true
+Urgencia (entrega <2 semanas),servicio,20,porcentaje,Recargo del 20% sobre el total para entregas urgentes.,"mesa,estanteria,espejo,otro",8,true

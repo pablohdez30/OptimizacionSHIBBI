@@ -1,0 +1,10 @@
+nombre,categoria,precioUnidad,unidadDefault,unidadOpciones,descripcion,aplicableA,orden,activo
+Pata Hairpin (horquilla),pata,30,4,"3,4",Patas de varilla metálica curvada. Estilo nórdico minimalista.,mesa,1,true
+Pata U metálica,pata,45,2,"2",Soporte tipo U en pletina de hierro. Aspecto industrial robusto.,mesa,2,true
+Pata X / aspa,pata,55,2,"2",Patas en aspa de hierro pintado. Estilo industrial elegante.,mesa,3,true
+Pata A / trapecio,pata,65,2,"2",Patas trapezoidales modernas en hierro o madera. Carácter contemporáneo.,mesa,4,true
+Pata madera torneada,pata,40,4,"4",Pata clásica torneada en madera. Estilo tradicional o vintage.,mesa,5,true
+Pata diseño a medida,pata,90,4,"2,3,4,6",Pata diseñada exclusivamente según tu idea. Desde 90€/ud según complejidad.,mesa,6,true
+Pedestal central,pata,150,1,"1",Base central robusta. Ideal para mesas redondas o cuadradas pequeñas.,mesa,7,true
+Soporte L estantería,soporte,12,4,"2,4,6,8",Escuadra metálica simple. Estilo industrial visible.,estanteria,8,true
+Soporte oculto,soporte,28,4,"2,4,6,8",Soporte invisible para baldas flotantes.,estanteria,9,true
