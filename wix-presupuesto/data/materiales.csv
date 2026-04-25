@@ -1,7 +1,0 @@
-nombre,tipo,precioM2,grosorOpciones,descripcion,aplicableA,orden,activo
-Roble macizo,madera,180,"3,5,8",Madera dura noble con vetas marcadas. Tono miel/dorado. La opción premium para mesas que duran generaciones.,"mesa,estanteria",1,true
-Pino macizo,madera,95,"3,5",Madera clara y económica. Veta visible y carácter rústico. Perfecta para estilos nórdicos y mediterráneos.,"mesa,estanteria",2,true
-Nogal macizo,madera,280,"3,5,8",Madera oscura premium con veta elegante. Tono marrón profundo. Para piezas de alta gama.,"mesa,estanteria",3,true
-Haya macizo,madera,140,"3,5",Madera clara y muy resistente. Acabado fino y limpio. Ideal para mesas de trabajo o cocina.,"mesa,estanteria",4,true
-Contrachapado abedul,tablero,90,"15mm,18mm,30mm",Tablero estable de capas con acabado claro. Resistente a humedad y deformación.,"mesa,estanteria",5,true
-MDF chapado roble,tablero,75,"16mm,19mm,22mm",Tablero económico con chapa de roble natural. Acabado parecido al roble macizo a menor coste.,"mesa,estanteria",6,true
