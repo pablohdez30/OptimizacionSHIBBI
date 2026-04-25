@@ -2,17 +2,23 @@
 
 export type TipoMueble = 'mesa' | 'estanteria' | 'espejo' | 'otro';
 
+export type Categoria = {
+  id: TipoMueble;
+  nombre: string;
+  descripcion: string;
+  desde: number | null;
+  placeholder: string;
+};
+
 export type Material = {
   id: string;
   nombre: string;
   tipo: 'madera' | 'tablero';
   precio_m2: number;
-  grosor_opciones: string;
-  foto: string | null;
+  grosor_opciones: number[];
   descripcion: string;
   aplicable_a: TipoMueble[];
-  orden: number;
-  activo: boolean;
+  placeholder: string;
 };
 
 export type Componente = {
@@ -21,55 +27,62 @@ export type Componente = {
   categoria: 'pata' | 'soporte' | 'marco';
   precio_unidad: number;
   unidad_default: number;
-  unidad_opciones: string;
-  foto: string | null;
+  unidad_opciones: number[];
   descripcion: string;
-  aplicable_a: TipoMueble[];
-  orden: number;
-  activo: boolean;
+  placeholder: string;
 };
 
-export type Extra = {
+export type Acabado = {
   id: string;
   nombre: string;
-  categoria: 'acabado' | 'servicio';
+  categoria: 'acabado';
   precio: number;
-  modificador: 'fijo' | 'porcentaje';
   descripcion: string;
-  aplicable_a: TipoMueble[];
-  orden: number;
-  activo: boolean;
 };
 
-export type ConfiguracionMueble = {
+export type Servicio = {
+  id: string;
+  nombre: string;
+  categoria: 'servicio';
+  precio: number;
+  modificador?: 'fijo' | 'porcentaje';
+  descripcion: string;
+};
+
+export type ComponenteSeleccionado = {
+  id: string;
+  cantidad: number;
+};
+
+export type Configuracion = {
   tipo: TipoMueble;
-  material?: Material;
-  grosor?: number;
-  componentes: Array<Componente & { cantidad: number }>;
-  acabado?: Extra;
-  servicios: Extra[];
-  medidas: { largo: number; ancho: number; alto: number };
-  descripcion_libre: string;
+  material_id: string | null;
+  grosor: number | null;
+  medidas: { largo: number | ''; ancho: number | ''; alto: number | '' };
+  componentes: ComponenteSeleccionado[];
+  acabado_id: string | null;
+  servicios_ids: string[];
+  nombre: string;
+  email: string;
+  telefono: string;
+  canal_preferido: 'email' | 'whatsapp' | 'cualquiera';
+  notas_adicionales: string;
+  imagenes: string[];
 };
 
-export type Desglose = {
-  concepto: string;
-  cantidad: string;
+export type DesgloseItem = {
+  id: string;
+  titulo: string;
+  subtitulo: string | null;
   importe: number;
 };
 
 export type Estimacion = {
   total: number;
-  desglose: Desglose[];
+  desglose: DesgloseItem[];
 };
 
-export type SolicitudInput = ConfiguracionMueble & {
-  imagenes: string[];
-  nombre: string;
-  email: string;
-  telefono?: string;
-  canal_preferido: 'email' | 'whatsapp' | 'cualquiera';
-  notas_adicionales?: string;
+export type SolicitudPayload = Configuracion & {
   presupuesto_estimado: number;
-  desglose: Desglose[];
+  desglose: DesgloseItem[];
 };

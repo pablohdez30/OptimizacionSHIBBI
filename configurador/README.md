@@ -16,25 +16,27 @@ una estimación al instante.
 
 ## Estado actual
 
-🚧 En construcción.
-
 | Capa | Estado |
 |---|---|
 | Brief de diseño | ✅ `docs/DESIGN-BRIEF.md` |
-| Estructura del proyecto | ✅ |
+| Frontend completo (Next.js + TS) | ✅ `app/` + `components/` |
 | Lógica de pricing | ✅ `lib/pricing.ts` |
+| Datos del catálogo (mock) | ✅ `lib/catalogo.ts` |
 | Schema + RLS Supabase | ✅ `supabase/*.sql` |
 | Seed data placeholder | ✅ `supabase/seed.sql` |
-| Tipos compartidos | ✅ `lib/types.ts` |
 | Validación con Zod | ✅ `lib/validation.ts` |
-| Helpers Supabase | ✅ `lib/supabase/*` |
-| Helper Resend | ✅ `lib/email.ts` |
-| Setup Supabase real | ⏳ pendiente |
-| API routes | ⏳ pendiente (después de Supabase) |
-| Frontend (componentes) | ⏳ pendiente (Claude Design) |
-| Cableado front ↔ API | ⏳ pendiente |
-| Deploy Vercel | ⏳ pendiente |
-| DNS subdominio | ⏳ pendiente |
+| Helpers Supabase + Resend | ✅ `lib/*` |
+| **Supabase proyecto real** | ⏳ pendiente |
+| **API routes** (`/api/solicitudes`) | ⏳ pendiente (cuando Supabase) |
+| **Cableado submit real** | ⏳ pendiente |
+| **Subida imágenes a Storage** | ⏳ pendiente |
+| **Deploy Vercel** | ⏳ pendiente |
+| **DNS subdominio** | ⏳ pendiente |
+
+> Hoy mismo puedes hacer `npm run dev` y ver la página completa funcionando
+> con datos de ejemplo. El submit por ahora solo loguea en consola
+> (`console.log('[stub]')`) — no envía nada real porque Supabase y Resend
+> aún no están configurados.
 
 ## Estructura
 
@@ -52,21 +54,32 @@ configurador/
 ├── docs/
 │   └── DESIGN-BRIEF.md      ← brief para herramienta de diseño AI
 │
+├── app/
+│   ├── layout.tsx           ← shell con fuentes (Fraunces, Inter Tight, JetBrains Mono)
+│   ├── page.tsx             ← página única del configurador
+│   └── globals.css          ← CSS vars + responsive
+│
+├── components/
+│   ├── Header.tsx, Hero.tsx, ProgressRail.tsx, Confirmation.tsx
+│   ├── PricePanel.tsx, MobilePricePanel.tsx
+│   ├── primitives/          ← Container, Section, LineInput, Switch…
+│   └── sections/            ← 6 secciones del configurador
+│
 ├── lib/
 │   ├── types.ts             ← tipos compartidos
+│   ├── catalogo.ts          ← datos mock (materiales, patas, acabados…)
 │   ├── pricing.ts           ← cálculo de estimación
+│   ├── format.ts            ← formato EUR español
 │   ├── validation.ts        ← schemas Zod
 │   ├── email.ts             ← envío con Resend
 │   └── supabase/
 │       ├── server.ts        ← clientes server-side
 │       └── client.ts        ← cliente browser
 │
-├── supabase/
-│   ├── schema.sql           ← tablas + triggers
-│   ├── rls.sql              ← row level security
-│   └── seed.sql             ← datos placeholder
-│
-└── app/                     ← (pendiente) páginas y API routes
+└── supabase/
+    ├── schema.sql           ← tablas + triggers
+    ├── rls.sql              ← row level security
+    └── seed.sql             ← datos placeholder
 ```
 
 ## Desarrollo local

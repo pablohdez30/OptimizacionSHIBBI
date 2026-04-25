@@ -1,67 +1,80 @@
-import type { ConfiguracionMueble, Estimacion, Desglose } from './types';
+import type {
+  Configuracion,
+  Estimacion,
+  DesgloseItem,
+  Material,
+  Componente,
+  Acabado,
+  Servicio
+} from './types';
+import { MATERIALES, COMPONENTES, ACABADOS, SERVICIOS } from './catalogo';
 
-export function calcularEstimacion(config: ConfiguracionMueble): Estimacion {
-  const desglose: Desglose[] = [];
-  let subtotal = 0;
+export function calcularEstimacion(config: Configuracion): Estimacion {
+  const desglose: DesgloseItem[] = [];
+  let total = 0;
 
-  if (config.material && config.medidas.largo > 0 && config.medidas.ancho > 0) {
-    const m2 = (config.medidas.largo / 100) * (config.medidas.ancho / 100);
-    const factorGrosor = factorPorGrosor(config.grosor);
-    const importe = m2 * config.material.precio_m2 * factorGrosor;
+  // Material principal
+  if (config.material_id) {
+    const mat = MATERIALES.find((m: Material) => m.id === config.material_id);
+    if (mat) {
+      const largoCm = typeof config.medidas.largo === 'number' ? config.medidas.largo : 0;
+      const anchoCm = typeof config.medidas.ancho === 'number' ? config.medidas.ancho : 0;
+      const m2 = (largoCm / 100) * (anchoCm / 100);
+      if (m2 > 0) {
+        const importe = round2(m2 * mat.precio_m2);
+        desglose.push({
+          id: 'material',
+          titulo: `${mat.nombre}${config.grosor ? ` (${config.grosor} cm)` : ''}`,
+          subtitulo: `${m2.toFixed(2).replace('.', ',')} m²`,
+          importe
+        });
+        total += importe;
+      }
+    }
+  }
+
+  // Componentes (patas, soportes…)
+  for (const cmp of config.componentes) {
+    const c = COMPONENTES.find((x: Componente) => x.id === cmp.id);
+    if (!c) continue;
+    const importe = round2(c.precio_unidad * cmp.cantidad);
     desglose.push({
-      concepto: `${config.material.nombre}${config.grosor ? ` (${config.grosor} cm)` : ''}`,
-      cantidad: `${m2.toFixed(2)} m²`,
-      importe: round2(importe)
+      id: `comp-${c.id}`,
+      titulo: c.nombre,
+      subtitulo: `${cmp.cantidad} ud × ${c.precio_unidad} €`,
+      importe
     });
-    subtotal += importe;
+    total += importe;
   }
 
-  for (const c of config.componentes) {
-    const importe = c.precio_unidad * c.cantidad;
+  // Acabado
+  if (config.acabado_id) {
+    const a = ACABADOS.find((x: Acabado) => x.id === config.acabado_id);
+    if (a) {
+      desglose.push({
+        id: `acab-${a.id}`,
+        titulo: a.nombre,
+        subtitulo: null,
+        importe: a.precio
+      });
+      total += a.precio;
+    }
+  }
+
+  // Servicios
+  for (const sid of config.servicios_ids) {
+    const s = SERVICIOS.find((x: Servicio) => x.id === sid);
+    if (!s) continue;
     desglose.push({
-      concepto: c.nombre,
-      cantidad: `${c.cantidad} ud × ${c.precio_unidad.toFixed(2)} €`,
-      importe: round2(importe)
+      id: `serv-${s.id}`,
+      titulo: s.nombre,
+      subtitulo: null,
+      importe: s.precio
     });
-    subtotal += importe;
+    total += s.precio;
   }
 
-  if (config.acabado && config.acabado.precio > 0) {
-    desglose.push({
-      concepto: `Acabado: ${config.acabado.nombre}`,
-      cantidad: '',
-      importe: round2(config.acabado.precio)
-    });
-    subtotal += config.acabado.precio;
-  }
-
-  const fijos = config.servicios.filter(s => s.modificador === 'fijo');
-  const porcentajes = config.servicios.filter(s => s.modificador === 'porcentaje');
-
-  for (const s of fijos) {
-    desglose.push({ concepto: s.nombre, cantidad: '', importe: round2(s.precio) });
-    subtotal += s.precio;
-  }
-
-  let total = subtotal;
-  for (const s of porcentajes) {
-    const incremento = subtotal * (s.precio / 100);
-    desglose.push({
-      concepto: s.nombre,
-      cantidad: `+${s.precio} %`,
-      importe: round2(incremento)
-    });
-    total += incremento;
-  }
-
-  return { total: round2(total), desglose };
-}
-
-function factorPorGrosor(cm?: number): number {
-  if (!cm) return 1;
-  if (cm <= 3) return 1;
-  if (cm <= 5) return 1.25;
-  return 1.6;
+  return { total: Math.round(total), desglose };
 }
 
 function round2(n: number): number {
