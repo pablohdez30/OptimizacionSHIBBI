@@ -10,10 +10,10 @@ const config: Config = {
       colors: {
         bg: "#080808",
         surface: {
-          1: "#111111",
-          2: "#1A1A1A",
+          1: "#141414",
+          2: "#1F1F1F",
         },
-        border: "#2A2A2A",
+        border: "#3A3A3A",
         gold: {
           DEFAULT: "#FAC51C",
           light: "#FFE38A",
@@ -21,7 +21,7 @@ const config: Config = {
         },
         text: {
           DEFAULT: "#F5F5F5",
-          muted: "#888888",
+          muted: "#B5B5B5",
         },
         state: {
           success: "#2D6A4F",

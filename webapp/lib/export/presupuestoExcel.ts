@@ -77,6 +77,7 @@ export async function generarExcelPresupuesto(
 
   // Líneas
   const moneyFmt = '#,##0.00 €';
+  const unitFmt = '0';
   const boldFont = { bold: true, size: 11 };
   const normalFont = { size: 11 };
   let row = 10;
@@ -89,6 +90,7 @@ export async function generarExcelPresupuesto(
     ws.getCell(row, 1).font = boldFont as any;
     ws.getCell(row, 5).value = linea.cantidad;
     ws.getCell(row, 5).font = normalFont as any;
+    ws.getCell(row, 5).numFmt = unitFmt;
     ws.getCell(row, 6).value = linea.precio_unitario_final;
     ws.getCell(row, 6).font = normalFont as any;
     ws.getCell(row, 6).numFmt = moneyFmt;
@@ -110,17 +112,27 @@ export async function generarExcelPresupuesto(
 
   // Línea de Porte / Instalación (si aplica) o nota informativa
   if (pres.incluye_instalacion) {
-    ws.getCell(17, 1).value = "Porte / Instalación";
-    ws.getCell(17, 1).font = boldFont as any;
-    ws.getCell(17, 5).value = 1;
-    ws.getCell(17, 5).font = normalFont as any;
-    ws.getCell(17, 6).value = pres.porte_importe;
-    ws.getCell(17, 6).font = normalFont as any;
-    ws.getCell(17, 6).numFmt = moneyFmt;
-    ws.getCell(17, 7).value = pres.porte_importe;
-    ws.getCell(17, 7).font = normalFont as any;
-    ws.getCell(17, 7).numFmt = moneyFmt;
-    totalBase += pres.porte_importe;
+    if (pres.porte_importe > 0) {
+      ws.getCell(17, 1).value = "Porte / Instalación";
+      ws.getCell(17, 1).font = boldFont as any;
+      ws.getCell(17, 5).value = 1;
+      ws.getCell(17, 5).font = normalFont as any;
+      ws.getCell(17, 5).numFmt = unitFmt;
+      ws.getCell(17, 6).value = pres.porte_importe;
+      ws.getCell(17, 6).font = normalFont as any;
+      ws.getCell(17, 6).numFmt = moneyFmt;
+      ws.getCell(17, 7).value = pres.porte_importe;
+      ws.getCell(17, 7).font = normalFont as any;
+      ws.getCell(17, 7).numFmt = moneyFmt;
+      totalBase += pres.porte_importe;
+    } else {
+      // Marcado como incluido sin importe: nota sin columnas de precio
+      ws.getCell(17, 1).value = "Porte / Instalación incluido";
+      ws.getCell(17, 1).font = boldFont as any;
+      ws.getCell(17, 5).value = null;
+      ws.getCell(17, 6).value = null;
+      ws.getCell(17, 7).value = null;
+    }
   } else {
     ws.getCell(18, 1).value = "Porte / Instalación no incluido";
     ws.getCell(18, 1).font = boldFont as any;

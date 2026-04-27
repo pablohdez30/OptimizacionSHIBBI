@@ -801,31 +801,31 @@ export default function FacturasPage() {
                           <button
                             onClick={() => setPreviewing(f)}
                             title="Ver"
-                            className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2"
+                            className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2"
                           >
-                            <Icon name="eye" size={13} />
+                            <Icon name="eye" size={16} />
                           </button>
                           <button
                             onClick={() => handleExportRow(f.id)}
                             disabled={exportingId === f.id}
                             title="Exportar (Excel + PDF)"
-                            className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a] disabled:opacity-50"
+                            className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a] disabled:opacity-50"
                           >
-                            <Icon name="download" size={13} />
+                            <Icon name="download" size={16} />
                           </button>
                           <a
                             href={`/facturas/${f.id}`}
                             title="Editar"
-                            className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
+                            className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
                           >
-                            <Icon name="edit" size={13} />
+                            <Icon name="edit" size={16} />
                           </a>
                           <button
                             onClick={() => handleDelete(f.id)}
                             title="Eliminar"
-                            className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-[#E74C3C]/80 hover:text-[#F39C8E] hover:bg-state-danger/10 hover:border-state-danger/40"
+                            className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-[#E74C3C]/80 hover:text-[#F39C8E] hover:bg-state-danger/10 hover:border-state-danger/40"
                           >
-                            <Icon name="trash" size={13} />
+                            <Icon name="trash" size={16} />
                           </button>
                         </div>
                       </td>

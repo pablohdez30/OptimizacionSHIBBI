@@ -754,46 +754,46 @@ export default function PresupuestosPage() {
                                 }
                                 disabled={creatingFactura === r.id}
                                 title="Crear factura"
-                                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gold/30 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold/60 text-[11px] font-medium disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gold/30 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold/60 text-[12px] font-medium disabled:opacity-50"
                               >
-                                <Icon name="invoice" size={13} />
+                                <Icon name="invoice" size={15} />
                                 {creatingFactura === r.id ? "Creando…" : "Factura"}
                               </button>
                             )}
                             <button
                               onClick={() => setPreviewId(r.id)}
                               title="Vista previa"
-                              className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
                             >
-                              <Icon name="eye" size={13} />
+                              <Icon name="eye" size={16} />
                             </button>
                             <button
                               onClick={() => handleExportRow(r.id)}
                               disabled={exportingId === r.id}
                               title="Exportar (PDF + Excel)"
-                              className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a] disabled:opacity-50"
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a] disabled:opacity-50"
                             >
-                              <Icon name="download" size={13} />
+                              <Icon name="download" size={16} />
                             </button>
                             <Link
                               href={`/nuevo-presupuesto?id=${r.id}`}
                               title="Editar"
-                              className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
                             >
-                              <Icon name="edit" size={13} />
+                              <Icon name="edit" size={16} />
                             </Link>
                             <button
                               title="Duplicar"
-                              className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-text-muted hover:text-text hover:bg-surface-2 hover:border-[#3a3a3a]"
                             >
-                              <Icon name="copy" size={13} />
+                              <Icon name="copy" size={16} />
                             </button>
                             <button
                               onClick={() => handleDelete(r.id)}
                               title="Eliminar"
-                              className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-[#E74C3C]/80 hover:text-[#F39C8E] hover:bg-state-danger/10 hover:border-state-danger/40"
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-[#E74C3C]/80 hover:text-[#F39C8E] hover:bg-state-danger/10 hover:border-state-danger/40"
                             >
-                              <Icon name="trash" size={13} />
+                              <Icon name="trash" size={16} />
                             </button>
                           </div>
                         </td>

@@ -182,6 +182,91 @@ function TagList({
   );
 }
 
+function ThemeToggleCard() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const saved =
+      typeof window !== "undefined"
+        ? (localStorage.getItem("theme") as "dark" | "light" | null)
+        : null;
+    if (saved === "light") setTheme("light");
+  }, []);
+
+  const apply = (t: "dark" | "light") => {
+    setTheme(t);
+    try {
+      localStorage.setItem("theme", t);
+    } catch {}
+    if (t === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+  };
+
+  return (
+    <Card num="08" icon="settings" title="Apariencia" subtitle="Tema visual">
+      <p className="text-[12px] text-text-muted mb-4 leading-relaxed">
+        Cambia entre modo oscuro (por defecto) y modo claro. La elección se
+        guarda en este navegador.
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => apply("dark")}
+          className={`flex items-center gap-3 h-14 px-4 rounded-lg border transition ${
+            theme === "dark"
+              ? "border-gold bg-gold/10 text-text"
+              : "border-border bg-[#0E0E0E] text-text-muted hover:border-[#3a3a3a] hover:text-text"
+          }`}
+        >
+          <span
+            className={`h-9 w-9 rounded-lg grid place-items-center ${
+              theme === "dark"
+                ? "bg-gold/20 text-gold"
+                : "bg-surface-2 text-text-muted"
+            }`}
+          >
+            <Icon name="moon" size={18} />
+          </span>
+          <span className="flex flex-col items-start">
+            <span className="text-[13px] font-semibold">Modo oscuro</span>
+            <span className="text-[11px] text-text-muted">Activo por defecto</span>
+          </span>
+          {theme === "dark" && (
+            <Icon name="check" size={16} className="ml-auto text-gold" stroke={2.6} />
+          )}
+        </button>
+        <button
+          onClick={() => apply("light")}
+          className={`flex items-center gap-3 h-14 px-4 rounded-lg border transition ${
+            theme === "light"
+              ? "border-gold bg-gold/10 text-text"
+              : "border-border bg-[#0E0E0E] text-text-muted hover:border-[#3a3a3a] hover:text-text"
+          }`}
+        >
+          <span
+            className={`h-9 w-9 rounded-lg grid place-items-center ${
+              theme === "light"
+                ? "bg-gold/20 text-gold"
+                : "bg-surface-2 text-text-muted"
+            }`}
+          >
+            <Icon name="sun" size={18} />
+          </span>
+          <span className="flex flex-col items-start">
+            <span className="text-[13px] font-semibold">Modo claro</span>
+            <span className="text-[11px] text-text-muted">Fondo blanco</span>
+          </span>
+          {theme === "light" && (
+            <Icon name="check" size={16} className="ml-auto text-gold" stroke={2.6} />
+          )}
+        </button>
+      </div>
+    </Card>
+  );
+}
+
 export default function ConfiguracionPage() {
   const [config, setConfig] = useState<ConfigMap>({});
   const [catsMat, setCatsMat] = useState<CategoriaMaterial[]>([]);
@@ -577,6 +662,9 @@ export default function ConfiguracionPage() {
               }
             />
           </Card>
+
+          {/* 08 Apariencia (tema oscuro / claro) */}
+          <ThemeToggleCard />
         </div>
       </section>
     </div>

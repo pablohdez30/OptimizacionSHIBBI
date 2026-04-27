@@ -170,14 +170,21 @@ export async function generarPdfPresupuesto(
       y = MARGIN_T + 10;
     }
     doc.setFont("helvetica", "bold");
-    doc.text("Porte / Instalación", xConcepto, y);
-    doc.text("1", xUnidades + COL_UNIDADES, y, { align: "right" });
-    doc.text(fmtNum(pres.porte_importe), xPX + COL_PX, y, { align: "right" });
-    doc.text(fmtNum(pres.porte_importe), xTotal + COL_TOTAL, y, {
-      align: "right",
-    });
-    totalBase += pres.porte_importe;
-    y += 7;
+    if (pres.porte_importe > 0) {
+      // Importe definido: línea con unidades, PX y total
+      doc.text("Porte / Instalación", xConcepto, y);
+      doc.text("1", xUnidades + COL_UNIDADES, y, { align: "right" });
+      doc.text(fmtNum(pres.porte_importe), xPX + COL_PX, y, { align: "right" });
+      doc.text(fmtNum(pres.porte_importe), xTotal + COL_TOTAL, y, {
+        align: "right",
+      });
+      totalBase += pres.porte_importe;
+      y += 7;
+    } else {
+      // Marcado como incluido pero sin importe: nota sin columnas
+      doc.text("Porte / Instalación incluido", xConcepto, y);
+      y += 7;
+    }
   } else {
     // Nota informativa: porte no incluido (sin línea de precio)
     y += 4;
