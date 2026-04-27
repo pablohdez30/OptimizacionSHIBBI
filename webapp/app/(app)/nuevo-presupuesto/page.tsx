@@ -850,10 +850,8 @@ function NuevoPresupuestoEditor() {
             loadMaterialesProveedor(pid);
           });
         } else {
-          // Borrador: cliente por defecto (el primero), un mueble con 3 líneas típicas
-          if (cs.length > 0) {
-            setGeneral((g) => ({ ...g, cliente_id: String(cs[0].id) }));
-          }
+          // Borrador: cliente sin preseleccionar (forzamos elección consciente),
+          // un mueble con 3 líneas típicas.
           // Previsualizar el Nº que se asignará
           try {
             setNumero(await previewNumeroPresupuesto());
@@ -998,7 +996,7 @@ function NuevoPresupuestoEditor() {
       setNumero("");
     }
     setGeneral({
-      cliente_id: clientes[0] ? String(clientes[0].id) : "",
+      cliente_id: "",
       fecha: new Date().toISOString().slice(0, 10),
       proyecto: "",
       porte: false,

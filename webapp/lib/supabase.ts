@@ -412,6 +412,28 @@ export async function getPresupuestosAceptadosSinFactura() {
   return (pres || []).filter((p: any) => !usados.has(p.id));
 }
 
+// Devuelve un mapa { presupuesto_id → { id, numero_factura } } para todos los
+// presupuestos que ya tienen una factura asociada. Lo usa el listado de
+// presupuestos para sustituir el botón "Crear factura" por un enlace.
+export async function getFacturasPorPresupuesto(): Promise<
+  Record<number, { id: number; numero_factura: string }>
+> {
+  const { data, error } = await supabase()
+    .from("facturas")
+    .select("id, numero_factura, presupuesto_id")
+    .not("presupuesto_id", "is", null);
+  if (error) throw error;
+  const map: Record<number, { id: number; numero_factura: string }> = {};
+  for (const f of data || []) {
+    const pid = (f as any).presupuesto_id as number;
+    map[pid] = {
+      id: (f as any).id as number,
+      numero_factura: (f as any).numero_factura as string,
+    };
+  }
+  return map;
+}
+
 // Crea factura a partir de un presupuesto (equivalente a FacturaModel.crear_desde_presupuesto)
 export async function crearFacturaDesdePresupuesto(presupuestoId: number) {
   const pres = await getPresupuesto(presupuestoId);

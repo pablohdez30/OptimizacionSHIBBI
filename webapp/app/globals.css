@@ -177,105 +177,226 @@ input.num, .num input { font-variant-numeric: tabular-nums; }
 /* ====================================================================== */
 /* ============================ TEMA CLARO ============================== */
 /* ====================================================================== */
-/* Activado vía <html data-theme="light"> (toggle en Configuración).      */
-/* Reescribe los tokens de color sin tener que tocar los componentes.    */
+/* Filosofía: papel sereno (Linear/Notion). Jerarquía por tipografía y    */
+/* sombra sutil, no por bloques saturados. El dorado FAC51C se reserva   */
+/* para fondos de píldoras / botones primarios; en texto, iconos y       */
+/* bordes pasa a ámbar oscuro (#B8860B) que sí cumple AA sobre blanco.   */
 
 html[data-theme="light"] {
-  --bg: #F4F5F7;
-  --surface-1: #FFFFFF;
-  --surface-2: #ECEDF1;
-  --gold: #B07B00;
-  --text: #1B1B1F;
-  --muted: #5F606A;
-  --border: #D6D7DD;
+  --bg: #FAFAF7;
+  --surface: #FFFFFF;
+  --surface-2: #F4F4F0;
+  --surface-3: #EEEEE8;
+  --border: #E5E5E0;
+  --border-strong: #D4D4CE;
+  --divider: #EDEDE7;
+  --text: #171717;
+  --text-muted: #6B6B66;
+  --text-subtle: #9A9A93;
+  --text-disabled: #BFBFB8;
+  --accent: #B8860B;
+  --accent-hover: #A0750A;
+  --accent-soft-bg: #FBF4DC;
+  --accent-soft-border: #E8D17A;
+  --accent-on: #1A1208;
+  --shadow-sm: 0 1px 2px rgba(20, 20, 15, 0.04);
+  --shadow-md: 0 4px 12px -4px rgba(20, 20, 15, 0.06);
+  --shadow-pop: 0 12px 32px -8px rgba(20, 20, 15, 0.10);
 }
 
 html[data-theme="light"],
 html[data-theme="light"] body {
-  background: #F4F5F7;
-  color: #1B1B1F;
+  background: #FAFAF7;
+  color: #171717;
 }
 
-/* ---- Tokens semánticos de Tailwind ---- */
-[data-theme="light"] .bg-bg                  { background-color: #F4F5F7 !important; }
-[data-theme="light"] .bg-surface-1           { background-color: #FFFFFF !important; }
-[data-theme="light"] .bg-surface-2           { background-color: #ECEDF1 !important; }
-[data-theme="light"] .hover\:bg-surface-1:hover { background-color: #FFFFFF !important; }
-[data-theme="light"] .hover\:bg-surface-2:hover { background-color: #E2E3E8 !important; }
-[data-theme="light"] .text-text              { color: #1B1B1F !important; }
-[data-theme="light"] .text-text-muted        { color: #5F606A !important; }
-[data-theme="light"] .hover\:text-text:hover { color: #1B1B1F !important; }
-[data-theme="light"] .hover\:text-text-muted:hover { color: #5F606A !important; }
-[data-theme="light"] .border-border          { border-color: #D6D7DD !important; }
-[data-theme="light"] .hover\:border-border:hover { border-color: #BFC0C7 !important; }
+/* ---------- Tokens semánticos de Tailwind ---------- */
+[data-theme="light"] .bg-bg                       { background-color: #FAFAF7 !important; }
+[data-theme="light"] .bg-surface-1                { background-color: #FFFFFF !important; }
+[data-theme="light"] .bg-surface-2                { background-color: #F4F4F0 !important; }
+[data-theme="light"] .hover\:bg-surface-1:hover   { background-color: #FFFFFF !important; }
+[data-theme="light"] .hover\:bg-surface-2:hover   { background-color: #EEEEE8 !important; }
+[data-theme="light"] .text-text                   { color: #171717 !important; }
+[data-theme="light"] .text-text-muted             { color: #6B6B66 !important; }
+[data-theme="light"] .hover\:text-text:hover      { color: #171717 !important; }
+[data-theme="light"] .hover\:text-text-muted:hover { color: #6B6B66 !important; }
+[data-theme="light"] .border-border               { border-color: #E5E5E0 !important; }
+[data-theme="light"] .border-surface-2            { border-color: #EDEDE7 !important; }
+[data-theme="light"] .hover\:border-border:hover  { border-color: #D4D4CE !important; }
 
-/* "text-bg" (texto sobre botones dorados) — debe seguir oscuro */
-[data-theme="light"] .text-bg                { color: #1B1B1F !important; }
+/* text-bg (texto sobre botones dorados) → accent-on, casi negro cálido */
+[data-theme="light"] .text-bg                     { color: #1A1208 !important; }
 
-/* ---- Backgrounds hex hardcodeados ---- */
-[data-theme="light"] .bg-\[\#080808\],
+/* ---------- Acento dorado en claro (Caso 1) ---------- */
+/* Texto / iconos en oro → ámbar oscuro #B8860B (AA sobre blanco) */
+[data-theme="light"] .text-gold                   { color: #B8860B !important; }
+[data-theme="light"] .hover\:text-gold:hover      { color: #B8860B !important; }
+[data-theme="light"] .text-gold-light,
+[data-theme="light"] .text-gold-dark              { color: #B8860B !important; }
+
+/* Bordes oro → border-soft suave; hover refuerza al ámbar */
+[data-theme="light"] .border-gold,
+[data-theme="light"] .border-gold\/15,
+[data-theme="light"] .border-gold\/20,
+[data-theme="light"] .border-gold\/25,
+[data-theme="light"] .border-gold\/30,
+[data-theme="light"] .border-gold\/40,
+[data-theme="light"] .border-gold\/50            { border-color: #E8D17A !important; }
+[data-theme="light"] .hover\:border-gold:hover,
+[data-theme="light"] .hover\:border-gold\/40:hover,
+[data-theme="light"] .hover\:border-gold\/60:hover { border-color: #B8860B !important; }
+
+/* Tintes oro suaves (bg-gold/X opacity): plano accent-soft-bg #FBF4DC */
+[data-theme="light"] .bg-gold\/5,
+[data-theme="light"] .bg-gold\/8,
+[data-theme="light"] .bg-gold\/10,
+[data-theme="light"] .bg-gold\/15,
+[data-theme="light"] .bg-gold\/20,
+[data-theme="light"] .bg-gold\/25,
+[data-theme="light"] .bg-gold\/\[0\.03\],
+[data-theme="light"] .bg-gold\/\[0\.04\],
+[data-theme="light"] .bg-gold\/\[0\.08\]         { background-color: #FBF4DC !important; }
+[data-theme="light"] .hover\:bg-gold\/10:hover,
+[data-theme="light"] .hover\:bg-gold\/15:hover,
+[data-theme="light"] .hover\:bg-gold\/20:hover,
+[data-theme="light"] .hover\:bg-gold\/\[0\.08\]:hover,
+[data-theme="light"] .hover\:bg-gold\/5:hover    { background-color: #F5E8B5 !important; }
+
+/* bg-gold sólido (botones primarios) → mantiene amarillo cálido + texto accent-on */
+[data-theme="light"] .bg-gold                    { background-color: #FAC51C !important; color: #1A1208 !important; }
+[data-theme="light"] .hover\:bg-gold-light:hover { background-color: #F5DC75 !important; }
+
+/* "Glow" dorado de blur que ensucia el papel: ocultar */
+[data-theme="light"] .blur-3xl.bg-gold\/5,
+[data-theme="light"] .blur-3xl.bg-gold\/10       { display: none; }
+
+/* ---------- Backgrounds hex hardcodeados ---------- */
+[data-theme="light"] .bg-\[\#080808\]            { background-color: #FAFAF7 !important; }
 [data-theme="light"] .bg-\[\#0E0E0E\],
-[data-theme="light"] .bg-\[\#0e0e0e\]        { background-color: #FFFFFF !important; }
+[data-theme="light"] .bg-\[\#0e0e0e\]            { background-color: #FFFFFF !important; }
 [data-theme="light"] .bg-\[\#111\],
 [data-theme="light"] .bg-\[\#111111\],
-[data-theme="light"] .bg-\[\#141414\]        { background-color: #FFFFFF !important; }
+[data-theme="light"] .bg-\[\#141414\]            { background-color: #FFFFFF !important; }
 [data-theme="light"] .bg-\[\#1A1A1A\],
 [data-theme="light"] .bg-\[\#1a1a1a\],
 [data-theme="light"] .bg-\[\#1F1F1F\],
 [data-theme="light"] .bg-\[\#1f1f1f\],
-[data-theme="light"] .bg-\[\#222\]           { background-color: #ECEDF1 !important; }
-[data-theme="light"] .bg-\[\#1a1405\]        { background-color: #FFF8E0 !important; }
+[data-theme="light"] .bg-\[\#222\]               { background-color: #F4F4F0 !important; }
+/* Cards "doradas" (gradiente from-[#1a1405] to-surface-1) → tinte plano */
+[data-theme="light"] .from-\[\#1a1405\]          { background-image: none !important; background-color: #FBF4DC !important; }
+[data-theme="light"] .bg-\[\#1a1405\]            { background-color: #FBF4DC !important; }
 
-/* ---- Texto: grises hex ---- */
-[data-theme="light"] .text-\[\#444\]         { color: #2F3036 !important; }
-[data-theme="light"] .text-\[\#555\]         { color: #5F606A !important; }
-[data-theme="light"] .text-\[\#666\]         { color: #6E6F79 !important; }
-[data-theme="light"] .text-\[\#777\]         { color: #7B7C86 !important; }
-[data-theme="light"] .text-\[\#888\]         { color: #82838D !important; }
-[data-theme="light"] .text-\[\#999\]         { color: #8C8D97 !important; }
+/* ---------- Texto: grises hex ---------- */
+[data-theme="light"] .text-\[\#444\]             { color: #4A4A45 !important; }
+[data-theme="light"] .text-\[\#555\]             { color: #6B6B66 !important; }
+[data-theme="light"] .text-\[\#666\]             { color: #7A7A74 !important; }
+[data-theme="light"] .text-\[\#777\]             { color: #888882 !important; }
+[data-theme="light"] .text-\[\#888\]             { color: #9A9A93 !important; }
+[data-theme="light"] .text-\[\#999\]             { color: #A8A8A0 !important; }
 [data-theme="light"] .text-\[\#aaa\],
-[data-theme="light"] .text-\[\#AAA\]         { color: #95969F !important; }
+[data-theme="light"] .text-\[\#AAA\]             { color: #B5B5AC !important; }
 [data-theme="light"] .text-\[\#bbb\],
 [data-theme="light"] .text-\[\#BBB\],
-[data-theme="light"] .text-\[\#BBBBBB\]      { color: #71727B !important; }
+[data-theme="light"] .text-\[\#BBBBBB\]          { color: #6B6B66 !important; }
 
-/* ---- Bordes hex ---- */
+/* ---------- Bordes hex ---------- */
 [data-theme="light"] .border-\[\#2A2A2A\],
 [data-theme="light"] .border-\[\#2a2a2a\],
 [data-theme="light"] .border-\[\#3A3A3A\],
-[data-theme="light"] .border-\[\#3a3a3a\]    { border-color: #D6D7DD !important; }
+[data-theme="light"] .border-\[\#3a3a3a\]        { border-color: #E5E5E0 !important; }
 [data-theme="light"] .hover\:border-\[\#3a3a3a\]:hover,
-[data-theme="light"] .hover\:border-\[\#3A3A3A\]:hover { border-color: #BFC0C7 !important; }
+[data-theme="light"] .hover\:border-\[\#3A3A3A\]:hover { border-color: #D4D4CE !important; }
 
-/* ---- Placeholders ---- */
-[data-theme="light"] .placeholder\:text-\[\#555\]::placeholder { color: #9B9CA5 !important; }
-[data-theme="light"] .placeholder\:text-\[\#666\]::placeholder { color: #A4A5AE !important; }
+/* ---------- Placeholders ---------- */
+[data-theme="light"] .placeholder\:text-\[\#555\]::placeholder { color: #9A9A93 !important; }
+[data-theme="light"] .placeholder\:text-\[\#666\]::placeholder { color: #B5B5AC !important; }
 
-/* ---- Form controls custom ---- */
-[data-theme="light"] .ss-input               { background: #FFFFFF; border-color: #D6D7DD; color: #1B1B1F; }
-[data-theme="light"] .ss-input::placeholder  { color: #9B9CA5; }
-[data-theme="light"] .ss-input:focus         { border-color: #B07B00; box-shadow: 0 0 0 3px rgba(176, 123, 0, 0.18); }
-[data-theme="light"] .ss-check               { background: #FFFFFF; border-color: #C8C9D0; }
-[data-theme="light"] .ss-check:hover         { border-color: #A4A5AE; }
-[data-theme="light"] .ss-check:checked       { background: #FAC51C; border-color: #B07B00; }
-[data-theme="light"] select.ss-input         {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235F606A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+/* ---------- Form controls custom ---------- */
+[data-theme="light"] .ss-input                   { background: #FFFFFF; border-color: #E5E5E0; color: #171717; }
+[data-theme="light"] .ss-input::placeholder      { color: #9A9A93; }
+[data-theme="light"] .ss-input:focus             { border-color: #B8860B; box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.18); }
+[data-theme="light"] .ss-check                   { background: #FFFFFF; border-color: #D4D4CE; }
+[data-theme="light"] .ss-check:hover             { border-color: #B8860B; }
+[data-theme="light"] .ss-check:checked           { background: #FAC51C; border-color: #B8860B; }
+[data-theme="light"] select.ss-input             {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6B66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
 }
 
-/* ---- Scrollbar ---- */
-[data-theme="light"] ::-webkit-scrollbar-track { background: #ECEDF1; }
-[data-theme="light"] ::-webkit-scrollbar-thumb { background: #C8C9D0; border-color: #ECEDF1; }
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #A4A5AE; }
+/* ---------- Scrollbar ---------- */
+[data-theme="light"] ::-webkit-scrollbar-track   { background: #F4F4F0; }
+[data-theme="light"] ::-webkit-scrollbar-thumb   { background: #D4D4CE; border-color: #F4F4F0; }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #B5B5AC; }
 
-/* ---- Selección ---- */
-[data-theme="light"] ::selection             { background: #FAC51C; color: #1B1B1F; }
+/* ---------- Selección ---------- */
+[data-theme="light"] ::selection                 { background: #FBF4DC; color: #1A1208; }
 
-/* ---- Línea separadora ---- */
-[data-theme="light"] .dashed-sep             {
-  background-image: linear-gradient(to right, #C8C9D0 50%, transparent 50%);
+/* ---------- Línea separadora ---------- */
+[data-theme="light"] .dashed-sep                 {
+  background-image: linear-gradient(to right, #D4D4CE 50%, transparent 50%);
 }
 
-/* ---- Bordes en surface-2 (separadores internos) ---- */
-[data-theme="light"] .border-surface-2       { border-color: #E2E3E8 !important; }
+/* ---------- Caso 4: gradiente dorado de los grandes totales ---------- */
+/* Por defecto (logos, números medianos, kickers) → ámbar sólido */
+[data-theme="light"] .gold-grad                  {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  color: #B8860B;
+}
+/* Totales BIG (≥ 30 px) → casi-negro cálido para máximo contraste */
+[data-theme="light"] .gold-grad.text-\[30px\],
+[data-theme="light"] .gold-grad.text-\[34px\],
+[data-theme="light"] .gold-grad.text-\[48px\],
+[data-theme="light"] .gold-grad.text-\[56px\]    { color: #1A1208; }
+
+/* ---------- Caso 5: glow dorado → sombra plana ---------- */
+[data-theme="light"] .glow-gold                  {
+  box-shadow: 0 1px 2px rgba(20, 20, 15, 0.04), 0 0 0 1px #E5E5E0;
+}
+
+/* ---------- Cards reciben sombra sutil siempre (Caso 5) ---------- */
+[data-theme="light"] .bg-surface-1               { box-shadow: 0 1px 2px rgba(20, 20, 15, 0.04); }
+
+/* ---------- Caso 2: Sidebar item activo ---------- */
+/* En oscuro: bg-gold + text-black. En claro: tinte ámbar suave + accent + barra lateral 3px */
+[data-theme="light"] aside nav a.bg-gold {
+  background: #FBF4DC !important;
+  color: #B8860B !important;
+  font-weight: 500 !important;
+  position: relative;
+  box-shadow: none;
+}
+[data-theme="light"] aside nav a.bg-gold::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: #B8860B;
+  border-radius: 0 2px 2px 0;
+}
+[data-theme="light"] aside nav a.text-black { color: #B8860B !important; }
+
+/* ---------- Estados verde/rojo: textos diseñados para fondo oscuro ---------- */
+[data-theme="light"] .text-\[\#6FBF8E\]          { color: #2D6A4F !important; }
+[data-theme="light"] .text-\[\#F39C8E\]          { color: #B42318 !important; }
+[data-theme="light"] .hover\:text-\[\#F39C8E\]:hover { color: #B42318 !important; }
+/* Soft bgs sobre claro: state-success/15 y state-danger/10 ya quedan
+   bien con la propia opacidad sobre #FAFAF7 (verde y rojo apagados). */
+
+/* ---------- today-pulse: ámbar en vez de yellow ---------- */
+[data-theme="light"] .today-pulse                {
+  animation: todayPulseLight 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes todayPulseLight {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(184, 134, 11, 0.30); }
+  50%      { box-shadow: 0 0 0 6px rgba(184, 134, 11, 0); }
+}
+
+/* ---------- Accesibilidad de inputs con wrapper bg-[#0E0E0E] ---------- */
 [data-theme="light"] .bg-\[\#0E0E0E\]:focus-within,
-[data-theme="light"] .bg-\[\#0e0e0e\]:focus-within { background-color: #FFFFFF !important; }
+[data-theme="light"] .bg-\[\#0e0e0e\]:focus-within { background-color: #FFFFFF !important; border-color: #B8860B !important; box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.16); }
+
+/* ---------- Botón "Factura" (badge con bg-gold/10 text-gold border-gold/30) ---------- */
+/* Hereda de las reglas de bg-gold/10 + text-gold + border-gold/30 — ya cubierto */

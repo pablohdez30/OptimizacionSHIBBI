@@ -11,6 +11,7 @@ import {
   getTotalPresupuesto,
   getConfigValue,
   crearFacturaDesdePresupuesto,
+  getFacturasPorPresupuesto,
 } from "@/lib/supabase";
 import type { Presupuesto } from "@/lib/types";
 import { colorFromName, initials } from "@/lib/avatar";
@@ -392,6 +393,9 @@ export default function PresupuestosPage() {
   const [page, setPage] = useState(1);
   const [ivaPct, setIvaPct] = useState(21);
   const [creatingFactura, setCreatingFactura] = useState<number | null>(null);
+  const [facturasMap, setFacturasMap] = useState<
+    Record<number, { id: number; numero_factura: string }>
+  >({});
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [showBatchExport, setShowBatchExport] = useState(false);
   const [exportingId, setExportingId] = useState<number | null>(null);
@@ -409,12 +413,14 @@ export default function PresupuestosPage() {
 
   const load = async () => {
     setLoading(true);
-    const [iva, list] = await Promise.all([
+    const [iva, list, facMap] = await Promise.all([
       getConfigValue("iva_porcentaje"),
       getPresupuestos(),
+      getFacturasPorPresupuesto(),
     ]);
     const ivaNum = parseFloat(iva || "21");
     setIvaPct(ivaNum);
+    setFacturasMap(facMap);
 
     const withTotals = await Promise.all(
       list.map(async (p) => {
@@ -747,19 +753,29 @@ export default function PresupuestosPage() {
                                 <Icon name="star" size={13} /> Reseña
                               </button>
                             )}
-                            {r.estado === "Aceptado" && (
-                              <button
-                                onClick={() =>
-                                  handleCrearFactura(r.id, r.numero_presupuesto)
-                                }
-                                disabled={creatingFactura === r.id}
-                                title="Crear factura"
-                                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gold/30 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold/60 text-[12px] font-medium disabled:opacity-50"
-                              >
-                                <Icon name="invoice" size={15} />
-                                {creatingFactura === r.id ? "Creando…" : "Factura"}
-                              </button>
-                            )}
+                            {r.estado === "Aceptado" &&
+                              (facturasMap[r.id] ? (
+                                <Link
+                                  href={`/facturas/${facturasMap[r.id].id}`}
+                                  title="Ver factura asociada"
+                                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-state-info/40 bg-state-info/10 text-state-info hover:bg-state-info/20 hover:border-state-info/70 text-[12px] font-medium whitespace-nowrap"
+                                >
+                                  <Icon name="invoice" size={15} />
+                                  Factura · {facturasMap[r.id].numero_factura}
+                                </Link>
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    handleCrearFactura(r.id, r.numero_presupuesto)
+                                  }
+                                  disabled={creatingFactura === r.id}
+                                  title="Crear factura"
+                                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gold/30 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold/60 text-[12px] font-medium disabled:opacity-50"
+                                >
+                                  <Icon name="invoice" size={15} />
+                                  {creatingFactura === r.id ? "Creando…" : "Factura"}
+                                </button>
+                              ))}
                             <button
                               onClick={() => setPreviewId(r.id)}
                               title="Vista previa"

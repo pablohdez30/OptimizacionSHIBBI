@@ -18,7 +18,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();",
+              "(function(){try{localStorage.removeItem('theme');var t=localStorage.getItem('theme-mode');if(t==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();",
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

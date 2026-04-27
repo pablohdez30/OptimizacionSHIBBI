@@ -188,7 +188,7 @@ function ThemeToggleCard() {
   useEffect(() => {
     const saved =
       typeof window !== "undefined"
-        ? (localStorage.getItem("theme") as "dark" | "light" | null)
+        ? (localStorage.getItem("theme-mode") as "dark" | "light" | null)
         : null;
     if (saved === "light") setTheme("light");
   }, []);
@@ -196,7 +196,7 @@ function ThemeToggleCard() {
   const apply = (t: "dark" | "light") => {
     setTheme(t);
     try {
-      localStorage.setItem("theme", t);
+      localStorage.setItem("theme-mode", t);
     } catch {}
     if (t === "light") {
       document.documentElement.setAttribute("data-theme", "light");
