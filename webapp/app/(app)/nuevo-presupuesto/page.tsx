@@ -1182,17 +1182,36 @@ function NuevoPresupuestoEditor() {
     try {
       const res = await exportPresupuesto(pid);
       setExportResult(res);
+      if (res.errores.length === 0) {
+        toast.success("Presupuesto exportado correctamente");
+      }
     } catch (e) {
-      setExportResult({ archivos: [], errores: [(e as Error).message] });
+      const msg = (e as Error).message;
+      setExportResult({ archivos: [], errores: [msg] });
+      toast.error("No se pudo exportar el presupuesto", { description: msg });
     }
   };
 
   /* --------- Render --------- */
+  // Modal de resultado de exportación: se renderiza siempre que esté presente
+  // (incluso cuando el editor está en estado loading tras un router.replace),
+  // así nunca se pierde la confirmación de "Presupuesto exportado".
+  const exportModal = exportResult && (
+    <ExportResultModal
+      archivos={exportResult.archivos}
+      errores={exportResult.errores}
+      onClose={() => setExportResult(null)}
+    />
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-text-muted">
-        Cargando...
-      </div>
+      <>
+        {exportModal}
+        <div className="flex items-center justify-center h-full text-text-muted">
+          Cargando...
+        </div>
+      </>
     );
   }
 
@@ -1617,13 +1636,7 @@ function NuevoPresupuestoEditor() {
         />
       )}
 
-      {exportResult && (
-        <ExportResultModal
-          archivos={exportResult.archivos}
-          errores={exportResult.errores}
-          onClose={() => setExportResult(null)}
-        />
-      )}
+      {exportModal}
     </div>
   );
 }

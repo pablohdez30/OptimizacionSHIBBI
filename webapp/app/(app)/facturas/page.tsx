@@ -574,8 +574,13 @@ export default function FacturasPage() {
     try {
       const res = await exportFactura(id);
       setExportResult(res);
+      if (res.errores.length === 0) {
+        toast.success("Factura exportada correctamente");
+      }
     } catch (e) {
-      setExportResult({ archivos: [], errores: [(e as Error).message] });
+      const msg = (e as Error).message;
+      setExportResult({ archivos: [], errores: [msg] });
+      toast.error("No se pudo exportar la factura", { description: msg });
     }
     setExportingId(null);
   };

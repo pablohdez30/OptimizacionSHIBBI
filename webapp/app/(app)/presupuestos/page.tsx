@@ -477,8 +477,13 @@ export default function PresupuestosPage() {
     try {
       const res = await exportPresupuesto(id);
       setExportResult(res);
+      if (res.errores.length === 0) {
+        toast.success("Presupuesto exportado correctamente");
+      }
     } catch (e) {
-      setExportResult({ archivos: [], errores: [(e as Error).message] });
+      const msg = (e as Error).message;
+      setExportResult({ archivos: [], errores: [msg] });
+      toast.error("No se pudo exportar el presupuesto", { description: msg });
     }
     setExportingId(null);
   };
