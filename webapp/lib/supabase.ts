@@ -375,18 +375,21 @@ export async function previewNumeroFactura() {
     if (!isNaN(n)) confSeq = n;
   }
 
+  // Tomamos TODAS las facturas del año y calculamos el máximo real de la
+  // secuencia. Ordenar por id y coger la última es frágil: si las facturas
+  // se crearon/importaron en distinto orden o se borró alguna, la de id más
+  // alto puede no ser la de número más alto y generaríamos un número repetido
+  // (violación de la restricción única facturas_numero_factura_key).
   const { data } = await supabase()
     .from("facturas")
     .select("numero_factura")
-    .like("numero_factura", `${year}-%`)
-    .order("id", { ascending: false })
-    .limit(1);
+    .like("numero_factura", `${year}-%`);
 
   let dbSeq = 0;
-  if (data && data.length > 0) {
-    const parts = data[0].numero_factura.split("-");
+  for (const row of data || []) {
+    const parts = (row as any).numero_factura.split("-");
     const n = parseInt(parts[1] || "0", 10);
-    if (!isNaN(n)) dbSeq = n;
+    if (!isNaN(n) && n > dbSeq) dbSeq = n;
   }
 
   const seq = Math.max(confSeq, dbSeq) + 1;
@@ -439,22 +442,47 @@ export async function crearFacturaDesdePresupuesto(presupuestoId: number) {
   const pres = await getPresupuesto(presupuestoId);
   if (!pres) throw new Error("Presupuesto no encontrado");
 
-  const numero = await previewNumeroFactura();
-  const { data: fac, error } = await supabase()
-    .from("facturas")
-    .insert({
-      numero_factura: numero,
-      presupuesto_id: presupuestoId,
-      cliente_id: pres.cliente_id,
-      proyecto: pres.proyecto || "",
-      fecha: new Date().toISOString().slice(0, 10),
-      notas_internas: "",
-      adelanto_descripcion: "",
-      adelanto_importe: 0,
-    })
-    .select()
-    .single();
-  if (error) throw error;
+  const year = new Date().getFullYear().toString().slice(-2);
+  let numero = await previewNumeroFactura();
+  let seq = parseInt(numero.split("-")[1] || "0", 10);
+
+  // Inserta reintentando si el número ya existe. Aunque previewNumeroFactura
+  // calcula el máximo real, un valor de configuración obsoleto o una creación
+  // concurrente podrían colisionar con la restricción única; en ese caso
+  // incrementamos la secuencia y volvemos a intentarlo.
+  let fac: any = null;
+  for (let intento = 0; intento < 50; intento++) {
+    const { data, error } = await supabase()
+      .from("facturas")
+      .insert({
+        numero_factura: numero,
+        presupuesto_id: presupuestoId,
+        cliente_id: pres.cliente_id,
+        proyecto: pres.proyecto || "",
+        fecha: new Date().toISOString().slice(0, 10),
+        notas_internas: "",
+        adelanto_descripcion: "",
+        adelanto_importe: 0,
+      })
+      .select()
+      .single();
+
+    if (!error) {
+      fac = data;
+      break;
+    }
+
+    // 23505 = unique_violation. Solo reintentamos ante colisión de número.
+    if ((error as any).code === "23505") {
+      seq += 1;
+      numero = `${year}-${String(seq).padStart(3, "0")}`;
+      continue;
+    }
+    throw error;
+  }
+  if (!fac) {
+    throw new Error("No se pudo asignar un número de factura libre");
+  }
 
   const lineas = await getLineasPresupuesto(presupuestoId);
   let orden = 0;
